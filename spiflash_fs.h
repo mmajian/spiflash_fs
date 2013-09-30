@@ -4,14 +4,24 @@
 #define SPIFLASH_FS_CTOL_SADDR 0x0
 #define SPIFLASH_FS_DATA_SADDR 0x1000
 #define SPIFLASH_IGNORE_SIZE 0x100
+#define SPIFLASH_SECTOR_SIZE 0x1000
+#define SPIFLASH_SECTOR_OFFSET 12
+#define SPIFLASH_SECTOR_SIZE_MASK (SPIFLASH_SECTOR_SIZE-1)
+#define SPIFLASH_LINK_HEADSIZE 0x10
+#define SPIFLASH_LINK_HEADSIZE_MASK (SPIFLASH_LINK_HEADSIZE-1)
 
 typedef u32 spiflashaddr_t;
 typedef u32 node_size_t;
 typedef u16 node_len_t;
 typedef u16 node_num_t;
 typedef u16 node_id_t;
+typedef u16 node_offset_t;
 
-linkhead_t* read_link_head(spiflashaddr_t faddr);
+linkhead_t*  read_link_head(spiflashaddr_t myfaddr, linkhead_t* mylinkhead);
+
+cache_write(node_offset_t myaddr, node_len_t mylen, u8 *mydata);
+cache_read(node_offset_t myaddr, node_len_t mylen, u8 *mydata);
+cache_update(node_offset_t myaddr, node_len_t mylen, u8 *mydata);
 
 u8 erase[256];
 
@@ -31,7 +41,6 @@ typedef struct vlink{
 
 struct vlink_s{
 	spiflashaddr_t head;
-	spiflashaddr_t pro;
 	spiflashaddr_t tail;
 	node_num_t num;
 }vlink_s;
@@ -46,35 +55,35 @@ typedef struct rlink{
 
 struct rlink_s{
 	spiflashaddr_t head;
-	spiflashaddr_t pro;
 	spiflashaddr_t tail;
 	u16 num;
 }rlink_s;
 
-typedef struct node{
+//ram struct
+typedef struct node{  //for malloc&free
 	spiflashaddr_t addr;
 	node_size_t size;
 }node_t;
 
 typedef struct link{
-	spiflashaddr_t addr;
-	node_size_t size;
+	updatelink_t	addr;
+	updatelink_t	next;
+	node_size_t		size;
 }linkhead_t;
-//ram status
+
 typedef struct updatelink{
-	updatelink_t *next;
-
-	spiflashaddr_t addr;
-	spiflashaddr_t next;
-	node_size_t size;
-	node_len_t len;
-
+	linkhead_t	*next;
+	linkhead_t	element;
 }updatelink_t;
 
+struct updatelink_head{
+	linkhead_t	*next;
+	node_id_t	id;
+	linkhead_t	element;
+}updatelink_head;
 /*
  * updatelink[0]: point to the linkhead data of to update on current sector.
  * updatelink[1]: point to the linkhead data of to update on other sector.
  *
  */
-updatelink_t *updatelink[2];
 #endif
