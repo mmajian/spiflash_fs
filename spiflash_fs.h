@@ -1,6 +1,9 @@
 #ifndef _SPIFLASH_FS_H_
 #define _SPIFLASH_FS_H_
 
+extern spi_flash_read_data(addr,  data, size);
+
+
 #define SPIFLASH_FS_CTOL_SADDR 0x0
 #define SPIFLASH_FS_DATA_SADDR 0x1000
 #define SPIFLASH_IGNORE_SIZE 0x100
@@ -19,15 +22,22 @@ typedef u16 node_offset_t;
 
 linkhead_t*  read_link_head(spiflashaddr_t myfaddr, linkhead_t* mylinkhead);
 
+
+cache_load(id_tmp);
 cache_write(node_offset_t myaddr, node_len_t mylen, u8 *mydata);
 cache_read(node_offset_t myaddr, node_len_t mylen, u8 *mydata);
-cache_update(node_offset_t myaddr, node_len_t mylen, u8 *mydata);
+cache_store(id_tmp);
 
-u8 erase[256];
+u8 erase[256];/*TODO block */
 
 struct cache{
 	node_id_t id;
-	u8  status;
+/*
+ *status: 
+ *		"0": dirty data;
+ *		"1": dirty data, cache is noncohernet with flash, must write back.
+ */
+	u8  status; 
 	u32 cache[512];
 }cache;
 
@@ -66,8 +76,8 @@ typedef struct node{  //for malloc&free
 }node_t;
 
 typedef struct link{
-	updatelink_t	addr;
-	updatelink_t	next;
+	spiflashaddr_t	addr;
+	spiflashaddr_t	next;
 	node_size_t		size;
 }linkhead_t;
 
@@ -77,9 +87,9 @@ typedef struct updatelink{
 }updatelink_t;
 
 struct updatelink_head{
-	linkhead_t	*next;
+	//linkhead_t	*next;
 	node_id_t	id;
-	linkhead_t	element;
+	updatelink_t	ele;
 }updatelink_head;
 /*
  * updatelink[0]: point to the linkhead data of to update on current sector.

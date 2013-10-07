@@ -197,8 +197,18 @@ void update_link_haead(linkhead_t *myupdatelink,1);
 {
 	node_id_t id_tmp;
 	node_offset_t offset_tmp;
+	linkhead_t *linkhead_tmp;
+	updatelink_t *updatelink_tmp;
 
+
+start:
 	id_tmp = (myupdatelink->addr | (~SPIFLASH_SECTOR_SIZE_MASK)) >> SPIFLASH_SECTOR_OFFSET;
+
+	if(get_cache_id() == NULL)
+	{
+		cache_load(id_tmp);
+	}
+
 	if(id_tmp == get_cache_id())
 	{
 		offset_tmp = myupdatelink->addr | SPIFLASH_SECTOR_SIZE_MASK;
@@ -207,8 +217,122 @@ void update_link_haead(linkhead_t *myupdatelink,1);
 		if(myupdatelink->size)
 			cache_write(node_offset_t myaddr, node_len_t mylen, u8 *mydata);
 	}
+	else if(updatelink_head.id == NULL )
+	{
+		updatelink_head.id = id_tmp;
+		updatelink_head.ele.next = NULL;
+		updatelink_head.ele.element.addr = myupdatelink->addr;
+		updatelink_head.ele.element.next = myupdatelink->next;
+		updatelink_head.ele.element.size = myupdatelink->size;
+	}
+	else if( updatelink_head.id == id_tmp )
+	{
+		for(updatelink_tmp = updatelink_head.ele; updatelink_tmp->next != NULL; updatelink_tmp = updatelink_tmp->next)
+			(
+				if(updatelink_tmp->element.addr == myupdatelink->addr)
+				(
+					updatelink_tmp->element.next = myupdatelink->next;
+					updatelink_tmp->element.size = myupdatelink->size;
+
+					return 1;
+				)
+			)
+			updatelink_tmp = malloc(sizeof(updatelink_t));
+			updatelink_tmp->element.next = myupdatelink->next;
+			updatelink_tmp->element.size = myupdatelink->size;
+			updatelink_tmp->element.addr = myupdatelink->addr;
+			updatelink_tmp->next = updatelink_head.next;
+			updatelink_head.next = updatelink_tmp;
+
+			return 2;
+	}
+	else if( updatelink_head.id != id_tmp )
+	{
+			cache_store(id_tmp);
+			goto start;
+	}
+
+	return 3;
 }
 
+u8 cache_load(node_id_t myid);
+{
+	updatelink_t *updatelink_tmp;
+
+	if(cache.status != 0)
+	{
+		return ERROR3;
+	}
+	spi_flash_read_data((myid << SPIFLASH_SECTOR_OFFSET), cache.cache, SPIFLASH_SECTOR_SIZE);
+	cache.id = myid;
+	if(updatelink_head.id == myid)
+	{
+		for(updatelink_tmp = updatelilnk_head.ele; updatelink_tmp != NULL; updatelink = updatelink->next)
+		{
+			if(updatelink_tmp->element.next != NULL)
+				cache_write(updatelink_tmp->element.addr, updatelink_tmp->element.next,sizeof(spiflashaddr_t));
+			if(updatelink_tmp->element.size != NULL)
+				cache_write(updatelink_tmp->element.addr + sizeof(spiflashaddr_t), updatelink_tmp->element.size,sizeof(spiflashaddr_t));
+		}
+
+		updatelinkd_head.id = NULL;
+		//free(); /* TODO */
+		updatelink_head.ele.next = NULL;
+
+		cache.status = 1;
+
+	}
+
+		return 0;
+}
+
+u8 cache_store(void);
+{
+	if(cache.id == NULL)
+	{
+		return ERROR;
+	}
+	if(cache.status == 0)
+	{
+		return 1;
+	}
+	if()
+	
+}
+
+void flash_data_read(u32 addr, u8 *data, u32 size)
+{
+	u8 result;
+	u32 addr_in_sector;
+
+	result = if_current_sector(addr);
+	if(0 == result)
+	{
+		spi_flash_read_data(addr,  data, size);
+	}
+	else
+	{
+		addr_in_sector = addr&SPI_FLASH_SECTOROFFSET_MASK;
+		mem_cpy(data, &(g_sector_buf[addr_in_sector]), size);
+	}
+}
+
+void flash_data_write(u32 addr, u8 *data, u32 size)
+{
+	u8 result;
+	u32 addr_in_sector;
+
+	result = if_current_sector(addr);
+	if(0 == result)
+	{
+		spi_flash_sector_flush();
+		//delay_nms(10000);
+		g_current_sector = addr & SPI_FLASH_SECTORADDR_MASK;
+		spi_flash_read_sector(g_current_sector, g_sector_buf);
+	}
+	addr_in_sector = addr&SPI_FLASH_SECTOROFFSET_MASK;
+	mem_cpy(&(g_sector_buf[addr_in_sector]), data, size);
+}
 
 
 
