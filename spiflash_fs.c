@@ -288,6 +288,10 @@ u8 cache_load(node_id_t myid);
 
 u8 cache_store(void);
 {
+	u8 index_tmp;
+	u8 offset_tmp;
+	u8 mask_tmp;
+
 	if(cache.id == NULL)
 	{
 		return ERROR;
@@ -296,8 +300,62 @@ u8 cache_store(void);
 	{
 		return 1;
 	}
-	if()
+	index_tmp = cache.id >> (SPIFLASH_BLOCK_OFFSET - SPIFLASH_SECTOR_OFFSET);
+	offset_tmp = cache.id & 0xf ;
+	if(erase[index_tmp] & (1<<offset_tmp))
+	{
+		spi_flash_erase_sector(cache.id);
+	}
 	
+	spi_flash_write_scetor(cache.id,  cache.cache);
+	cache.status = 0;
+
+	return 0;
+}
+/*
+ * Determine maunaly before call this func:
+ *			1.mylen < (SPIFLASH_SECTOR_SIZE - offset_tmp)
+ *
+ */
+u8 cache_read(spiflashaddr_t myaddr, node_len_t mylen, u8 *mydata);
+{
+	node_offset_t offset_tmp;
+	node_id_t id_tmp;
+
+	id_tmp = myaddr >> SPIFLASH_SECTOR_OFFSET;
+
+	if(cache.id != id_tmp)
+		return ERROR;
+
+	offset_tmp = myaddr & SPIFLASH_SECTOR_SIZE_MASK; 
+
+	mem_cpy(mydata, &(cache.cache[offset_tmp]), mylen);
+
+	return 0;
+
+}
+u8 cache_write(spiflashaddr_t myaddr, node_len_t mylen, u8 *mydata);
+{
+	node_offset_t offset_tmp;
+	node_id_t id_tmp;
+
+	id_tmp = myaddr >> SPIFLASH_SECTOR_OFFSET;
+
+	if(cache.id != id_tmp)
+		return ERROR;
+
+	offset_tmp = myaddr & SPIFLASH_SECTOR_SIZE_MASK; 
+
+	if(mylen > (SPIFLASH_SECTOR_SIZE - offset_tmp))
+	{
+		return ERROR;
+	}
+
+	mem_cpy(&(cache.cache[addr_in_sector]), mydata, mylen);
+	cache.status = 1;
+
+	return 0;
+
 }
 
 void flash_data_read(u32 addr, u8 *data, u32 size)

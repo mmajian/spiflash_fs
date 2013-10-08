@@ -2,13 +2,17 @@
 #define _SPIFLASH_FS_H_
 
 extern spi_flash_read_data(addr,  data, size);
+extern spi_flash_write_scetor(setctor_id,  data);
+extern spi_flash_erase_sector(setctor_id);
 
 
+void flash_data_read(u32 addr, u8 *data, u32 size)
 #define SPIFLASH_FS_CTOL_SADDR 0x0
 #define SPIFLASH_FS_DATA_SADDR 0x1000
 #define SPIFLASH_IGNORE_SIZE 0x100
 #define SPIFLASH_SECTOR_SIZE 0x1000
 #define SPIFLASH_SECTOR_OFFSET 12
+#define SPIFLASH_BLOCK_OFFSET 16
 #define SPIFLASH_SECTOR_SIZE_MASK (SPIFLASH_SECTOR_SIZE-1)
 #define SPIFLASH_LINK_HEADSIZE 0x10
 #define SPIFLASH_LINK_HEADSIZE_MASK (SPIFLASH_LINK_HEADSIZE-1)
@@ -28,16 +32,22 @@ cache_write(node_offset_t myaddr, node_len_t mylen, u8 *mydata);
 cache_read(node_offset_t myaddr, node_len_t mylen, u8 *mydata);
 cache_store(id_tmp);
 
-u8 erase[256];/*TODO block */
+//u8 erase[256];/*TODO block */
+/*
+ * erase:
+ *		1: erased,can used;
+ *		0: non't  erased, can't used;
+ */
+u8 erase[16];	/* block number */
 
 struct cache{
 	node_id_t id;
 /*
  *status: 
- *		"0": dirty data;
+ *		"0": isn't dirty data;
  *		"1": dirty data, cache is noncohernet with flash, must write back.
  */
-	u8  status; 
+	u8  status;
 	u32 cache[512];
 }cache;
 
