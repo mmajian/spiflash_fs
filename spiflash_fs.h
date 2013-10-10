@@ -4,6 +4,9 @@
 extern spi_flash_read_data(addr,  data, size);
 extern spi_flash_write_scetor(setctor_id,  data);
 extern spi_flash_erase_sector(setctor_id);
+extern spi_flash_erase_all(void);
+extern u8 rx_data(void);
+extern void tx_data(u8 data);
 
 
 #define FLASH_RETURN_SIGN (0x80000000)
@@ -57,7 +60,7 @@ linkhead_t*  read_link_head(spiflashaddr_t myfaddr, linkhead_t* mylinkhead);
 cache_load(id_tmp);
 cache_write(node_offset_t myaddr, node_len_t mylen, u8 *mydata);
 cache_read(node_offset_t myaddr, node_len_t mylen, u8 *mydata);
-cache_store(id_tmp);
+cache_store(void);
 
 //u8 erase[256];/*TODO block */
 /*
@@ -104,13 +107,26 @@ typedef struct vlink{
 
 #define INROM_ERASE_OFFSET	0x100
 #define INROM_ERASE_SIZE	0x10
+
+struct rom_mesg{
+	u32 dirty;
+	u32 magic;
+	spiflashaddr_t vhead;
+	spiflashaddr_t vtail;
+	node_num_t vnum;
+	spiflashaddr_t rhead;
+	spiflashaddr_t rtail;
+	node_num_t rnum;
+}rom_mesg_t;
+
+rom_mesg_t rom_mesg_s;
+/*
 struct vlink_s{
 	spiflashaddr_t head;
 	spiflashaddr_t tail;
 	node_num_t num;
 }vlink_s;
 
-/*
 typedef struct rlink{
 	spiflashaddr_t next;
 	node_len_t len;
@@ -118,13 +134,12 @@ typedef struct rlink{
 	node_size_t size;
 	u8 *data;
 }* rlink_t;
-*/
-
 struct rlink_s{
 	spiflashaddr_t head;
 	spiflashaddr_t tail;
 	node_num_t num;
 }rlink_s;
+*/
 
 //ram struct
 typedef struct node{  //for malloc&free

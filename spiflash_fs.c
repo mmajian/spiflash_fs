@@ -315,6 +315,12 @@ DEFAULT_RETURN_T cache_store(void)
 	u8 offset_tmp;
 	u8 mask_tmp;
 
+	if(cache.status == 3)
+	{
+			cache.id = 0;
+			goto mesg_store;
+	}
+
 	if(cache.id == NULL)
 	{
 		return FLASH_ERROR5;
@@ -325,8 +331,10 @@ DEFAULT_RETURN_T cache_store(void)
 		return FLASH_STATUS1;
 	}
 
+mesg_store:
 	index_tmp = cache.id >> (SPIFLASH_BLOCK_OFFSET - SPIFLASH_SECTOR_OFFSET);
 	offset_tmp = cache.id & 0xf ;
+
 	if(erase[index_tmp] & (1<<offset_tmp))
 	{
 		spi_flash_erase_sector(cache.id);
@@ -416,8 +424,55 @@ DEFAULT_RETURN_T cache_write(spiflashaddr_t myaddr, node_len_t mylen, u8 *mydata
 
 }
 
+DEFAULT_RETURN_T update_rom_mesg(rom_mesg_t *mymesg)
+{
+	if(cache.status != 3)
+		return FLASH_ERROR9;
+
+	if(mymesg->dirty == 0)
+		return FLASH_STATUS4 ;
+
+	cache.id = 0;
+
+	cache_write(INROM_MAGIC_OFFSET, sizeof(rom_mesg_t), (u8 *)&mymesg->magic);
+	cache_write(INROM_ERASE_OFFSET, INROM_ERASE_SIZE, erase);
+
+	return FLASH_OK;
+	/*
+	cache_write(INROM_MAGIC_OFFSET, 0x4, (u8 *)&mymesg->vhead);
+	cache_write(INROM_VHEAD_OFFSET, 0x4, (u8 *)&mymesg->v);
+	cache_write(INROM_VTAIL_OFFSET, 0x4, (u8 *)&mymesg->vhead);
+	cache_write(INROM_VNUM_OFFSET, 0x4, (u8 *)&mymesg->vhead);
+	cache_write(INROM_RHEAD_OFFSET, 0x4, (u8 *)&mymesg->vhead);
+	cache_write(INROM_RTAIL_OFFSET, 0x4, (u8 *)&mymesg->vhead);
+	cache_write(INROM_RNUM_OFFSET, 0x4, (u8 *)&mymesg->vhead);
+	*/
+}
 void spiflash_fs_first_init(void)
 {
+	u8 i;
+
+	spi_flash_erase_all();
+
+	if(i = 0; i < 16 ; i++)
+	{
+		erase[i] = 0xff;
+	}
+
+	rom_mesg_s.dirty = 1;
+	rom_mesg_s.magic = INROM_MAGIC_VALUE;
+	rom_mesg_s.vhead = 0;
+	rom_mesg_s.vtail = 0;
+	rom_mesg_s.vnum = 0;
+	rom_mesg_s.rhead = SPIFLASH_FS_DATA_SADDR;
+	rom_mesg_s.rtail = SPIFLASH_FS_DATA_SADDR;
+	rom_mesg_s.rnum = 1;
+
+	cache.status = 3;
+	update_rom_mesg(&rom_mesg_s);
+	cache_store();
+
+	return FLASH_OK;
 }
 
 DEFAULT_RETURN_T spiflash_fs_init(void)
@@ -462,13 +517,88 @@ DEFAULT_RETURN_T spiflash_fs_init(void)
 		updatelink_buf[i].id = NULL;
 	}
 	updatelink_num = 0;
+
+	return FLASH_OK;
 }
 
-DEFAULT_RETURN_T spiflash_add_list(u8 mydata; node_size_t mylen)
+DEFAULT_RETURN_T spiflash_add_list(u8 *mydata; node_size_t mylen)
+{
+	node_t	node_tmp;
+	node_t	*node_p_tmp;
+	node_id_t	id_my;
+	node_offset_t	offset_my;
+	u16 i;
+	u8 *p;
+	node_size_t s0; s1;
+
+	node_tmp.size = mylen;
+	node_p_tmp = malloc_node(&node_tmp);
+
+	if((DEFAULT_RETURN_T)node_p_tmp & FLASH_RETURN_SIGN)
+		return (DEFAULT_RETURN_T)node_p_tmp;
+
+	id_my = node_tmp.addr >> SPIFLASH_SECTOR_OFFSET;
+	offset_my = node_tmp.addr & SPIFLASH_SECTOR_SIZE_MASK;
+
+	if((offset_my + mylen)& ~SPIFLASH_SECTOR_SIZE_MASK)
+	{
+		s0 = SPIFLASH_SECTOR_SIZE - offset_my;
+		s1 = (offset_my + mylen)& SPIFLASH_SECTOR_SIZE_MASK;
+	}
+	else
+	{
+		s0 = mylen;
+		s1 = 0;
+	}
+
+	if(id_my != cache.id)
+	{
+		switch(cache.status){
+		case 1:
+			cache_store();
+			break;
+		case 0:
+			break;
+		case 2:
+		case 3:
+			return FLASH_ERRORa;
+			break;
+		}
+
+		cache_load(id_my);
+	}
+
+	p = &cache.cache[offset_tmp];
+
+	for(i = 0; i < s0; i++,p++)
+	{
+		*p = rx_date();
+	}
+	cache.status = 1;
+
+	if(s1 != 0)
+	{
+		cache_store();
+		cache_load(id_my+1);
+		p = &cache.cache[0];
+
+		for(i = 0; i < s1; i++,p++)
+		{
+			*p = rx_date();
+		}
+		cache.status = 1;
+	}
+
+	return FLASH_OK;
+}
+
+DEFAULT_RETURN_T spiflash_tx_list(spiflashaddr_t myaddr)
 {
 }
-
 DEFAULT_RETURN_T spiflash_del_list(spiflashaddr_t myaddr)
 {
 }
 
+DEFAULT_RETURN_T spiflash_find_list(spiflashaddr_t myaddr)
+{
+}
