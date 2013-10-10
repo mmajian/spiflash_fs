@@ -7,6 +7,7 @@ extern spi_flash_erase_sector(setctor_id);
 extern spi_flash_erase_all(void);
 extern u8 rx_data(void);
 extern void tx_data(u8 data);
+extern u32 get_time();
 
 
 #define FLASH_RETURN_SIGN (0x80000000)
@@ -22,6 +23,7 @@ extern void tx_data(u8 data);
 #define FLASH_ERROR8 (FLASH_ERROR_SIGN | 0x8)
 #define FLASH_ERROR9 (FLASH_ERROR_SIGN | 0x9)
 #define FLASH_ERRORa (FLASH_ERROR_SIGN | 0xa)
+#define FLASH_ERRORb (FLASH_ERROR_SIGN | 0xb)
 
 #define FLASH_STATUS1 (FLASH_ERROR_SIGN | 0x100)
 #define FLASH_STATUS2 (FLASH_ERROR_SIGN | 0x200)
@@ -107,6 +109,13 @@ typedef struct vlink{
 
 #define INROM_ERASE_OFFSET	0x100
 #define INROM_ERASE_SIZE	0x10
+
+#define INROM_LIST_NEXT_OFFSET	0x0
+#define INROM_LIST_SIZE_OFFSET	0x4
+#define INROM_LIST_DATALEN_OFFSET	0x8
+#define INROM_LIST_DATE_OFFSET	0xc
+#define INROM_LIST_SIZE		0x10
+#define INROM_lIST_DATA_OFFSET	0x10
 
 struct rom_mesg{
 	u32 dirty;
