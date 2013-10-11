@@ -7,6 +7,7 @@
  *
  *
  */
+#include "spiflash_fs.h"
 
 linkhead_t*  read_link_head(spiflashaddr_t myfaddr, linkhead_t* mylinkhead)
 {
@@ -35,7 +36,7 @@ node_t* malloc_node(node_t *mynode)
 	if((mynode == NULL )|| (mynode->size == NULL))
 			return FLASH_ERROR1;
 
-	linkhead_tmp = read_link_head(rlink_s->head, &linkhead_s_tmp);
+	linkhead_tmp = read_link_head(rom_mesg_s.rhead, &linkhead_s_tmp);
 	faddr_tmp = linkhead_tmp->next;
 
 	if(mynode->size < SPIFLASH_IGNORE_SIZE)
@@ -70,9 +71,9 @@ node_t* malloc_node(node_t *mynode)
 
 	if(size_tmp  >= SPIFLASH_IGNORE_SIZE)
 	{
-		if(faddr_tmp == rlink_s->head)
+		if(faddr_tmp == rom_mesg_s.rhead)
 		{
-			rlink_s->head = linkhead_tmp->addr - mynode->size;
+			rom_mesg_s.rhead = linkhead_tmp->addr - mynode->size;
 
 		}
 		else
@@ -94,9 +95,9 @@ node_t* malloc_node(node_t *mynode)
 	}
 	else
 	{
-		if(faddr_tmp == rlink_s->head)
+		if(faddr_tmp == rom_mesg_s.rhead)
 		{
-			rlink_s->head = linkhead_tmp->addr - mynode->size - SPIFLASH_LINK_HEADSIZE;
+			rom_mesg_s.rhead = linkhead_tmp->addr - mynode->size - SPIFLASH_LINK_HEADSIZE;
 
 		}
 		else
@@ -124,7 +125,7 @@ DEFAULT_RETURN_T free_node(node_t *mynode)
 	node_size_t size_tmp;
 	linkhead_t updatelink_tmp_tmp;
 
-	linkhead_tmp = read_link_head(rlink_s->head, &linkhead_s_tmp);
+	linkhead_tmp = read_link_head(rom_mesg_s.rhead, &linkhead_s_tmp);
 	linkheadpre_tmp = linkhead_tmp;
 
 	if((mynode == NULL )|| (mynode->size == NULL))
@@ -181,7 +182,7 @@ DEFAULT_RETURN_T free_node(node_t *mynode)
 					update_link_head(&updatelink_s_tmp,1);
 				}
 
-				rlink_s->head =  mynode->addr;
+				rom_mesg_s.rhead =  mynode->addr;
 			}
 			else
 			{
@@ -254,7 +255,7 @@ start:
 	}
 	else if((updatelink_num != 0)&&(updatelink_buf[i].id != id_tmp))
 	{
-			cache_store(id_tmp);
+			cache_store();
 			goto start;
 	}
 	else
@@ -496,13 +497,13 @@ DEFAULT_RETURN_T spiflash_fs_init(void)
 	/* init V&R links */
 	spi_flash_read_data(0,  &c, INROM_INFOR_SIZE);
 
-	vlink_s.head = *(spiflashaddr_t *)(p+INROM_VHEAD_OFFSET);
-	vlink_s.tail = *(spiflashaddr_t *)(p+INROM_VTAIL_OFFSET);
-	vlink_s.num = *(spiflashaddr_t *)(p+INROM_VNUM_OFFSET);
+	rom_mesg_s.vhead = *(spiflashaddr_t *)(p+INROM_VHEAD_OFFSET);
+	rom_mesg_s.vtail = *(spiflashaddr_t *)(p+INROM_VTAIL_OFFSET);
+	rom_mesg_s.vnum = *(spiflashaddr_t *)(p+INROM_VNUM_OFFSET);
 
-	rlink_s.head = *(spiflashaddr_t *)(p+INROM_RHEAD_OFFSET);
-	rlink_s.tail = *(spiflashaddr_t *)(p+INROM_RTAIL_OFFSET);
-	rlink_s.num = *(spiflashaddr_t *)(p+INROM_RNUM_OFFSET);
+	rom_mesg_s.rhead = *(spiflashaddr_t *)(p+INROM_RHEAD_OFFSET);
+	rom_mesg_s.rtail = *(spiflashaddr_t *)(p+INROM_RTAIL_OFFSET);
+	rom_mesg_s.rnum = *(spiflashaddr_t *)(p+INROM_RNUM_OFFSET);
 
 	/* init cache */
 	cache.id = NULL;
@@ -520,8 +521,11 @@ DEFAULT_RETURN_T spiflash_fs_init(void)
 
 	return FLASH_OK;
 }
-
-DEFAULT_RETURN_T spiflash_add_list(u8 *mydata; node_size_t mylen)
+/*
+ * this func is API, for store list.
+ *
+ */
+DEFAULT_RETURN_T spiflash_add_list(node_size_t mylen)
 {
 	node_t	node_tmp;
 	node_t	*node_p_tmp;
@@ -572,12 +576,20 @@ DEFAULT_RETURN_T spiflash_add_list(u8 *mydata; node_size_t mylen)
 		cache_load(id_my);
 	}
 
+	/* add link list to vlinks */
+	p = &cache.cache[offset_tmp];
+
+	*(u32 *)(p + INROM_LIST_NEXT_OFFSET) = NULL;
+	*(u32 *)(p + INROM_LIST_SIZE_OFFSET) = node_tmp.size;
+	*(u32 *)(p + INROM_LIST_DATALEN_OFFSET) = mylen;
+	*(u32 *)(p + INROM_LIST_DATE_OFFSET) = get_time();
+
 
 	p = &cache.cache[offset_tmp + INROM_lIST_DATA_OFFSET];
 
 	for(i = 0; i < s0; i++,p++)
 	{
-		*p = rx_date();
+		*p = rx_data();
 	}
 	cache.status = 1;
 
@@ -589,18 +601,10 @@ DEFAULT_RETURN_T spiflash_add_list(u8 *mydata; node_size_t mylen)
 
 		for(i = 0; i < s1; i++,p++)
 		{
-			*p = rx_date();
+			*p = rx_data();
 		}
 		cache.status = 1;
 	}
-
-	/* add link list to vlinks */
-	p = &cache.cache[offset_tmp];
-
-	*(u32 *)(p + INROM_LIST_NEXT_OFFSET) = NULL;
-	*(u32 *)(p + INROM_LIST_SIZE_OFFSET) = node_tmp.size;
-	*(u32 *)(p + INROM_LIST_DATALEN_OFFSET) = mylen;
-	*(u32 *)(p + INROM_LIST_DATE_OFFSET) = get_time();
 
 	lh_tmp.addr = rom_mesg_s.vtail;
 	lh_tmp.next = node_tmp.addr;
@@ -622,6 +626,7 @@ DEFAULT_RETURN_T spiflash_tx_list(spiflashaddr_t myaddr)
 
 }
 /*
+ * this func is API, for tx&del list when mode = 0;
  * mode:
  *     0: from vhead del one list, and tx data.
  *     1: del one list for myaddr, and don't data.
@@ -683,7 +688,7 @@ DEFAULT_RETURN_T spiflash_del_list(spiflashaddr_t myaddr, u8 mode)
 
 		for(i = 0; i < s0; i++,p++)
 		{
-			tx_date(*p);
+			tx_data(*p);
 		}
 
 		if(s1 != 0)
@@ -694,7 +699,7 @@ DEFAULT_RETURN_T spiflash_del_list(spiflashaddr_t myaddr, u8 mode)
 
 			for(i = 0; i < s1; i++,p++)
 			{
-				tx_date(*p);
+				tx_data(*p);
 			}
 		}
 	}
@@ -735,11 +740,78 @@ DEFAULT_RETURN_T spiflash_del_list(spiflashaddr_t myaddr, u8 mode)
 
 	node_tmp.addr = myaddr;
 	node_tmp.size = lk_tmp.size;
-	node_free(&node_tmp);
+	free_node(&node_tmp);
 
 	return FLASH_OK;
 }
 
-DEFAULT_RETURN_T spiflash_find_list(spiflashaddr_t *myaddr)
+spiflashaddr_t * spiflash_find_list(node_len_t mylen)
 {
+	u16 i, nf = 1;
+	u8 *p;
+	linkhead_t *linkhead_tmp;
+	linkhead_t linkhead_s_tmp, linkheadpro_s_tmp;
+	spiflashaddr_t	faddr_tmp;
+	node_len_t len_tmp;
+
+	if(mylen > 0x800)
+		return FLASH_ERRORc;
+
+	if(cache.status == 1)
+		cache_store();
+
+	p = cache.cache[0];
+	cache.status = 2;
+
+	/* load data to cache */
+	for(i = 0; i < mylen; i++)
+	{
+	  *p = rx_data();
+	}
+
+	linkhead_tmp = read_link_head(rom_mesg_s.vhead, &linkhead_s_tmp);
+	while(linkhead_tmp != NULL)
+	{
+		flash_data_read(linkhead_tmp->addr + INROM_LIST_DATALEN_OFFSET,2, &len_tmp);
+		if(len_tmp == mylen)
+		{
+			flash_data_read(linkhead_tmp->addr + INROM_lIST_DATA_OFFSET,mylen, &cache.cache[0x800]);
+			nf = mem_cmp(&cache.cache[0],&cache.cache[0x800],mylen);
+			if( nf == 1 )
+				continue;
+			else
+				break;
+		}
+
+		linkheadpre_s_tmp.addr = linkhead_tmp->addr;
+		linkheadpre_s_tmp.next = linkhead_tmp->next;
+		linkheadpre_s_tmp.size = linkhead_tmp->size;
+
+		linkhead_tmp = read_link_head(linkhead_tmp->next, &linkhead_s_tmp);
+
+	}
+	if(nf == 0)
+		return linkhead_tmp->addr;
+	else
+		return 0;
 }
+
+/*
+ * this func is API, for find&del list;
+ */
+
+DEFAULT_RETURN_T spiflash_remvoe_list(node_len_t mylen)
+{
+	spiflashaddr_t	faddr_tmp;
+
+	faddr_tmp = spiflash_find_list(mylen);
+
+	if((faddr_tmp == NULL) || (faddr_tmp == FLASH_RETURN_SIGN))
+	{
+		return 1;
+	}
+	spiflash_del_list(faddr_tmp,1);
+
+		return 0;
+}
+

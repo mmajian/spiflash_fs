@@ -24,6 +24,7 @@ extern u32 get_time();
 #define FLASH_ERROR9 (FLASH_ERROR_SIGN | 0x9)
 #define FLASH_ERRORa (FLASH_ERROR_SIGN | 0xa)
 #define FLASH_ERRORb (FLASH_ERROR_SIGN | 0xb)
+#define FLASH_ERRORc (FLASH_ERROR_SIGN | 0xc)
 
 #define FLASH_STATUS1 (FLASH_ERROR_SIGN | 0x100)
 #define FLASH_STATUS2 (FLASH_ERROR_SIGN | 0x200)
@@ -116,7 +117,13 @@ typedef struct vlink{
 #define INROM_LIST_DATE_OFFSET	0xc
 #define INROM_LIST_SIZE		0x10
 #define INROM_lIST_DATA_OFFSET	0x10
-
+/* map:
+ * |--------------------------------------------------------
+ * |
+ * |--------------------------------------------------------
+ * |
+ * |--------------------------------------------------------
+ */
 struct rom_mesg{
 	u32 dirty;
 	u32 magic;
@@ -152,10 +159,6 @@ struct rlink_s{
 
 //ram struct
 typedef struct node{  //for malloc&free
-#define ROM_NEXT_OFFSET 0
-#define ROM_NEXT_SIZE 4
-#define ROM_SIZE_OFFSET 0
-#define ROM_SIZE_SIZE 4
 	spiflashaddr_t addr;
 	node_size_t size;
 }node_t;
