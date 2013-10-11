@@ -238,7 +238,7 @@ DEFAULT_RETURN_T update_link_head(linkhead_t *myupdatelink)
 
 
 start:
-	id_tmp = (myupdatelink->addr | (~SPIFLASH_SECTOR_SIZE_MASK)) >> SPIFLASH_SECTOR_OFFSET;
+	id_tmp = (myupdatelink->addr & (~SPIFLASH_SECTOR_SIZE_MASK)) >> SPIFLASH_SECTOR_OFFSET;
 
 	if(get_cache_id() == NULL)
 	{
@@ -249,7 +249,11 @@ start:
 	{
 
 		if(myupdatelink->next)
+		{
+			if(myupdatelink->next == NEXT_NULL)
+				myupdatelink->next = NULL;
 			cache_write(myupdatelink->addr + INROM_LIST_NEXT_OFFSET, 0x4, (u8 *)&myupdatelink->next);
+		}
 
 		if(myupdatelink->size)
 			cache_write(myupdatelink->addr + INROM_LIST_SIZE_OFFSET, 0x4, (u8 *)&myupdatelink->size);
@@ -339,10 +343,19 @@ mesg_store:
 	index_tmp = cache.id >> (SPIFLASH_BLOCK_OFFSET - SPIFLASH_SECTOR_OFFSET);
 	offset_tmp = cache.id & 0xf ;
 
-	if(erase[index_tmp] & (1<<offset_tmp))
+	if((erase[index_tmp] & (1<<offset_tmp)) == 0)
 	{
 		spi_flash_erase_sector(cache.id);
 	}
+
+	if(cache.status != 3)
+	{
+		erase[index_tmp] = erase[index_tmp] & ~(1<<offset_tmp);
+		rom_mesg_s.dirty = 1;
+	}
+	else
+		rom_mesg_s.dirty = 0;
+
 
 	spi_flash_write_scetor(cache.id,  cache.cache);
 	cache.status = 0;
@@ -388,7 +401,7 @@ DEFAULT_RETURN_T flash_data_read(spiflashaddr_t myaddr, node_len_t mylen, u8 *my
 	offset_tmp = myaddr & SPIFLASH_SECTOR_SIZE_MASK;
 	id_tmp = myaddr >> SPIFLASH_SECTOR_OFFSET;
 
-	if(cache.id != id_tmp)
+	if(cache.id == id_tmp)
 	{
 		if(mylen <= (SPIFLASH_SECTOR_SIZE - offset_tmp))
 		{
@@ -422,7 +435,9 @@ DEFAULT_RETURN_T cache_write(spiflashaddr_t myaddr, node_len_t mylen, u8 *mydata
 	}
 
 	mem_cpy(&(cache.cache[offset_tmp]), mydata, mylen);
-	cache.status = 1;
+
+	if(cache.status != 3)
+		cache.status = 1;
 
 	return FLASH_OK;
 
@@ -438,7 +453,7 @@ DEFAULT_RETURN_T update_rom_mesg(rom_mesg_t *mymesg)
 
 	cache.id = 0;
 
-	cache_write(INROM_MAGIC_OFFSET, sizeof(rom_mesg_t), (u8 *)&mymesg->magic);
+	cache_write(INROM_MAGIC_OFFSET, sizeof(rom_mesg_t)-4, (u8 *)mymesg);
 	cache_write(INROM_ERASE_OFFSET, INROM_ERASE_SIZE, erase);
 
 	return FLASH_OK;
@@ -455,6 +470,7 @@ DEFAULT_RETURN_T update_rom_mesg(rom_mesg_t *mymesg)
 void spiflash_fs_first_init(void)
 {
 	u8 i;
+	linkhead_t linkhead_s_tmp;
 
 	spi_flash_erase_all();
 
@@ -462,6 +478,15 @@ void spiflash_fs_first_init(void)
 	{
 		erase[i] = 0xff;
 	}
+
+	erase[0] = 0xfe;
+
+	linkhead_s_tmp.addr = SPIFLASH_FS_DATA_SADDR;
+	linkhead_s_tmp.next = NEXT_NULL;
+	//linkhead_s_tmp.size = 0x800000 - 0x1000 - INROM_LIST_SIZE;
+	linkhead_s_tmp.size = 0x800000 - 0x1000;
+	update_link_head(&linkhead_s_tmp);
+	cache_store();
 
 	rom_mesg_s.dirty = 1;
 	rom_mesg_s.magic = INROM_MAGIC_VALUE;
@@ -476,6 +501,7 @@ void spiflash_fs_first_init(void)
 	update_rom_mesg(&rom_mesg_s);
 	cache_store();
 
+
 	return FLASH_OK;
 }
 
@@ -487,6 +513,19 @@ DEFAULT_RETURN_T spiflash_fs_init(void)
 	p = c;
 	u32 magic_tmp;
 
+	/* init cache */
+	cache.id = NULL;
+	cache.status = NULL;
+
+	/* init updatelink */
+	for(i = 0; i < UPDATE_NUM; i++)
+	{
+		updatelink_buf[i].id = NULL;
+	}
+	updatelink_num = 0;
+
+	/* init erase */
+	spi_flash_read_data(INROM_ERASE_OFFSET,  erase, INROM_ERASE_SIZE);
 
 	spi_flash_read_data(INROM_MAGIC_OFFSET,  &magic_tmp, INROM_MAGIC_SIZE);
 	if(magic_tmp != INROM_MAGIC_VALUE)
@@ -508,19 +547,7 @@ DEFAULT_RETURN_T spiflash_fs_init(void)
 	rom_mesg_s.rtail = *(spiflashaddr_t *)(p+INROM_RTAIL_OFFSET);
 	rom_mesg_s.rnum = *(spiflashaddr_t *)(p+INROM_RNUM_OFFSET);
 
-	/* init cache */
-	cache.id = NULL;
-	cache.status = NULL;
 
-	/* init erase */
-	spi_flash_read_data(INROM_ERASE_OFFSET,  erase, INROM_ERASE_SIZE);
-
-	/* init updatelink */
-	for(i = 0; i < UPDATE_NUM; i++)
-	{
-		updatelink_buf[i].id = NULL;
-	}
-	updatelink_num = 0;
 
 	return FLASH_OK;
 }

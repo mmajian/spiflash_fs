@@ -51,7 +51,7 @@ u32 get_time()
 {
 	return 0;
 }
-void mem_cmp(u8 *src, u8 *des, u32 size)
+void mem_cpy(u8 *des, u8 *src, u32 size)
 {
 	u32 i;
 	for(i = 0 ; i < size; i++)
@@ -59,7 +59,7 @@ void mem_cmp(u8 *src, u8 *des, u32 size)
 
 	return ;
 }
-u8 mem_cpy(u8 *src, u8 *des, u32 size)
+u8 mem_cmp(u8 *des, u8 *src, u32 size)
 {
 	u32 i;
 	for(i = 0 ; i < size; i++)

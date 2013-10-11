@@ -42,6 +42,7 @@ extern u32 get_time();
 #define FLASH_STATUS9 (FLASH_ERROR_SIGN | 0x900)
 #define FLASH_STATUSa (FLASH_ERROR_SIGN | 0xa00)
 
+#define NEXT_NULL 0x80000000
 
 #define SPIFLASH_FS_CTOL_SADDR 0x0
 #define SPIFLASH_FS_DATA_SADDR 0x1000
@@ -129,7 +130,6 @@ typedef struct vlink{
  * |--------------------------------------------------------
  */
 typedef struct rom_mesg{
-	u32 dirty;
 	u32 magic;
 	spiflashaddr_t vhead;
 	spiflashaddr_t vtail;
@@ -137,6 +137,7 @@ typedef struct rom_mesg{
 	spiflashaddr_t rhead;
 	spiflashaddr_t rtail;
 	node_num_t rnum;
+	u32 dirty;
 }rom_mesg_t;
 
 rom_mesg_t rom_mesg_s;
