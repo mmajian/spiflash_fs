@@ -1,17 +1,22 @@
 #ifndef _SPIFLASH_FS_H_
 #define _SPIFLASH_FS_H_
+typedef unsigned int u32;
+typedef unsigned short u16;
+typedef unsigned char u8;
+#define NULL 0
 
-extern spi_flash_read_data(addr,  data, size);
-extern spi_flash_write_scetor(setctor_id,  data);
-extern spi_flash_erase_sector(setctor_id);
-extern spi_flash_erase_all(void);
+extern u32 spi_flash_read_data(u32 addr, u8* data, u32 size);
+extern u32 spi_flash_write_scetor(u16 id, u8 *data);
+extern u32 spi_flash_erase_sector(u16 setctor_id);
+extern void spi_flash_erase_all(void);
 extern u8 rx_data(void);
 extern void tx_data(u8 data);
 extern u32 get_time();
 
 
 #define FLASH_RETURN_SIGN (0x80000000)
-#define DEFAULT_RETURN_T (u32)
+#define FLASH_ERROR_SIGN (0x80000000)
+#define DEFAULT_RETURN_T u32
 #define FLASH_OK (FLASH_ERROR_SIGN | 0x0)
 #define FLASH_ERROR1 (FLASH_ERROR_SIGN | 0x1)
 #define FLASH_ERROR2 (FLASH_ERROR_SIGN | 0x2)
@@ -38,7 +43,6 @@ extern u32 get_time();
 #define FLASH_STATUSa (FLASH_ERROR_SIGN | 0xa00)
 
 
-u8 flash_data_read(spiflashaddr_t myaddr, node_len_t mylen, u8 *mydata);
 #define SPIFLASH_FS_CTOL_SADDR 0x0
 #define SPIFLASH_FS_DATA_SADDR 0x1000
 #define SPIFLASH_IGNORE_SIZE 0x100
@@ -57,13 +61,12 @@ typedef u32 node_num_t;
 typedef u16 node_id_t;
 typedef u16 node_offset_t;
 
-linkhead_t*  read_link_head(spiflashaddr_t myfaddr, linkhead_t* mylinkhead);
-
-
+/*
 cache_load(id_tmp);
 cache_write(node_offset_t myaddr, node_len_t mylen, u8 *mydata);
 cache_read(node_offset_t myaddr, node_len_t mylen, u8 *mydata);
 cache_store(void);
+*/
 
 //u8 erase[256];/*TODO block */
 /*
@@ -124,7 +127,7 @@ typedef struct vlink{
  * |
  * |--------------------------------------------------------
  */
-struct rom_mesg{
+typedef struct rom_mesg{
 	u32 dirty;
 	u32 magic;
 	spiflashaddr_t vhead;
@@ -169,6 +172,12 @@ typedef struct link{
 	node_size_t		size;
 }linkhead_t;
 
+DEFAULT_RETURN_T update_link_head(linkhead_t *myupdatelink);
+DEFAULT_RETURN_T cache_load(node_id_t myid);
+DEFAULT_RETURN_T cache_store(void);
+DEFAULT_RETURN_T cache_read(spiflashaddr_t myaddr, node_len_t mylen, u8 *mydata);
+DEFAULT_RETURN_T flash_data_read(spiflashaddr_t myaddr, node_len_t mylen, u8 *mydata);
+DEFAULT_RETURN_T cache_write(spiflashaddr_t myaddr, node_len_t mylen, u8 *mydata);
 /*
 typedef struct updatelink{
 	linkhead_t	*next;

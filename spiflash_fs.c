@@ -28,12 +28,13 @@ node_t* malloc_node(node_t *mynode)
 {
 	linkhead_t	*linkhead_tmp;
 	linkhead_t	linkhead_s_tmp;
-	updatelink_t	updatelink_tmp;
+	//updatelink_t	updatelink_tmp;
+	linkhead_t updatelink_tmp;
 	spiflashaddr_t	faddr_tmp;
 	node_size_t		size_tmp;
 	u8 ok = 0;
 
-	if((mynode == NULL )|| (mynode->size == NULL))
+	if((mynode == NULL ) || (mynode->size == NULL))
 			return FLASH_ERROR1;
 
 	linkhead_tmp = read_link_head(rom_mesg_s.rhead, &linkhead_s_tmp);
@@ -49,13 +50,13 @@ node_t* malloc_node(node_t *mynode)
 	 */
 	if(mynode->size | SPIFLASH_LINK_HEADSIZE_MASK)
 	{
-		mynode->size = (mynode->size + SPIFLASH_IGNORE_SIZE) | ~(SPIFLASH_LINK_HEADSIZE_MASK)
+		mynode->size = (mynode->size + SPIFLASH_IGNORE_SIZE) | ~(SPIFLASH_LINK_HEADSIZE_MASK);
 	}
 
 	while(linkhead_tmp != NULL)
 	{
 
-		if(mynode->size <= linkhead->size)
+		if(mynode->size <= linkhead_tmp->size)
 		{
 			ok = 1;
 		}
@@ -67,7 +68,7 @@ node_t* malloc_node(node_t *mynode)
 	if(ok == 0)
 		return FLASH_ERROR2;
 
-	size_tmp = linkhead->size - mynode->size;
+	size_tmp = linkhead_tmp->size - mynode->size;
 
 	if(size_tmp  >= SPIFLASH_IGNORE_SIZE)
 	{
@@ -80,15 +81,15 @@ node_t* malloc_node(node_t *mynode)
 		{
 			updatelink_tmp.addr = faddr_tmp;
 			updatelink_tmp.next = faddr_tmp - mynode->size - SPIFLASH_LINK_HEADSIZE;
-			update_link_haead(&updatelink_tmp,1);
+			update_link_head(&updatelink_tmp);
 		}
 
 		updatelink_tmp.addr = faddr_tmp;
 		updatelink_tmp.next = linkhead_tmp->next;
 		updatelink_tmp.size = size_tmp;
-		updatelink_tmp.date = NULL;
+//		updatelink_tmp.date = NULL;
 
-		update_link_haead(&updatelink_tmp,0);
+		update_link_head(&updatelink_tmp);
 
 		mynode->addr = linkhead_tmp->addr;
 		mynode->size = mynode->size;
@@ -104,7 +105,7 @@ node_t* malloc_node(node_t *mynode)
 		{
 			updatelink_tmp.addr = faddr_tmp;
 			updatelink_tmp.next = linkhead_tmp->next;
-			update_link_haead(&updatelink_tmp,1);
+			update_link_head(&updatelink_tmp);
 		}
 
 		mynode->addr = linkhead_tmp->addr;
@@ -120,10 +121,10 @@ DEFAULT_RETURN_T free_node(node_t *mynode)
 {
 	linkhead_t *linkhead_tmp;
 	linkhead_t linkhead_s_tmp;
+	linkhead_t updatelink_s_tmp;
 	linkhead_t *linkheadpre_tmp;
 	u8 ok = 0;
 	node_size_t size_tmp;
-	linkhead_t updatelink_tmp_tmp;
 
 	linkhead_tmp = read_link_head(rom_mesg_s.rhead, &linkhead_s_tmp);
 	linkheadpre_tmp = linkhead_tmp;
@@ -148,19 +149,19 @@ DEFAULT_RETURN_T free_node(node_t *mynode)
 		{
 			if(mynode->addr == (linkheadpre_tmp->size + linkheadpre_tmp->addr))
 			{
-				updatelink_tmp->addr = linkheadpre_tmp->addr;
-				updatelink_tmp->size = linkheadpre_tmp->size + mynode->size;
-				update_link_head(&updatelink_s_tmp,1);
+				updatelink_s_tmp.addr = linkheadpre_tmp->addr;
+				updatelink_s_tmp.size = linkheadpre_tmp->size + mynode->size;
+				update_link_head(&updatelink_s_tmp);
 			}
 			else
 			{
-				updatelink_tmp->addr = mynode->addr;
-				updatelink_tmp->size = mynode->size;
-				update_link_head(&updatelink_s_tmp,1);
+				updatelink_s_tmp.addr = mynode->addr;
+				updatelink_s_tmp.size = mynode->size;
+				update_link_head(&updatelink_s_tmp);
 
-				updatelink_tmp->addr = linkheadpre_tmp->addr;
-				updatelink_tmp->next = mynode->addr;
-				update_link_head(&updatelink_s_tmp,1);
+				updatelink_s_tmp.addr = linkheadpre_tmp->addr;
+				updatelink_s_tmp.next = mynode->addr;
+				update_link_head(&updatelink_s_tmp);
 			}
 		}
 		else
@@ -169,17 +170,17 @@ DEFAULT_RETURN_T free_node(node_t *mynode)
 			{
 				if(linkhead_tmp->addr == (mynode->size + mynode->addr))
 				{
-					updatelink_tmp->addr = mynode->addr;
-					updatelink_tmp->size = linkhead_tmp->size + mynode->size;
-					updatelink_tmp->next = linkhead_tmp->next;
-					update_link_haead(&updatelink_s_tmp,1);
+					updatelink_s_tmp.addr = mynode->addr;
+					updatelink_s_tmp.size = linkhead_tmp->size + mynode->size;
+					updatelink_s_tmp.next = linkhead_tmp->next;
+					update_link_head(&updatelink_s_tmp);
 				}
 				else
 				{
-					updatelink_tmp->addr = mynode->addr;
-					updatelink_tmp->size = mynode->size;
-					updatelink_tmp->next = linkheadpre_tmp->addr;
-					update_link_head(&updatelink_s_tmp,1);
+					updatelink_s_tmp.addr = mynode->addr;
+					updatelink_s_tmp.size = mynode->size;
+					updatelink_s_tmp.next = linkheadpre_tmp->addr;
+					update_link_head(&updatelink_s_tmp);
 				}
 
 				rom_mesg_s.rhead =  mynode->addr;
@@ -188,50 +189,51 @@ DEFAULT_RETURN_T free_node(node_t *mynode)
 			{
 				if(linkhead_tmp->addr == (mynode->size + mynode->addr))
 				{
-					updatelink_tmp->addr = mynode->addr;
-					updatelink_tmp->size = linkhead_tmp->size + mynode->size;
-					updatelink_tmp->next = linkhead_tmp->next;
-					update_link_head(&updatelink_s_tmp,1);
+					updatelink_s_tmp.addr = mynode->addr;
+					updatelink_s_tmp.size = linkhead_tmp->size + mynode->size;
+					updatelink_s_tmp.next = linkhead_tmp->next;
+					update_link_head(&updatelink_s_tmp);
 				}
 				else
 				{
-					updatelink_tmp->addr = mynode->addr;
-					updatelink_tmp->size = mynode->size;
-					updatelink_tmp->next = linkheadpre_tmp->addr;
-					update_link_head(&updatelink_s_tmp,1);
+					updatelink_s_tmp.addr = mynode->addr;
+					updatelink_s_tmp.size = mynode->size;
+					updatelink_s_tmp.next = linkheadpre_tmp->addr;
+					update_link_head(&updatelink_s_tmp);
 				}
 
 				if(mynode->addr == (linkheadpre_tmp->size + linkheadpre_tmp->addr))
 				{
-					updatelink_tmp->addr = linkheadpre_tmp->addr;
-					updatelink_tmp->size = linkheadpre_tmp->size + mynode->size;
-					update_link_head(&updatelink_s_tmp,1);
+					updatelink_s_tmp.addr = linkheadpre_tmp->addr;
+					updatelink_s_tmp.size = linkheadpre_tmp->size + mynode->size;
+					update_link_head(&updatelink_s_tmp);
 				}
 				else
 				{
-					updatelink_tmp->addr = mynode->addr;
-					updatelink_tmp->size = mynode->size;
-					update_link_head(&updatelink_s_tmp,1);
+					updatelink_s_tmp.addr = mynode->addr;
+					updatelink_s_tmp.size = mynode->size;
+					update_link_head(&updatelink_s_tmp);
 
-					updatelink_tmp->addr = linkheadpre_tmp->addr;
-					updatelink_tmp->next = mynode->addr;
-					update_link_head(&updatelink_s_tmp,1);
+					updatelink_s_tmp.addr = linkheadpre_tmp->addr;
+					updatelink_s_tmp.next = mynode->addr;
+					update_link_head(&updatelink_s_tmp);
 				}
 			}
 		}
 
 		return FLASH_OK;
 }
-inline node_id_t  get_cache_id(void)
+
+static inline node_id_t  get_cache_id(void)
 {
 		return cache.id;
 }
 
-DEFAULT_RETURN_T update_link_head(linkhead_t *myupdatelink);
+DEFAULT_RETURN_T update_link_head(linkhead_t *myupdatelink)
 {
 	node_id_t id_tmp;
 	linkhead_t *linkhead_tmp;
-	updatelink_t *updatelink_tmp;
+//	updatelink_t *updatelink_tmp;
 	u8 i;
 
 
@@ -280,14 +282,15 @@ start:
 	return FLASH_OK;
 }
 
-DEFAULT_RETURN_T cache_load(node_id_t myid);
+DEFAULT_RETURN_T cache_load(node_id_t myid)
 {
-	updatelink_t *updatelink_tmp;
-	updatelink_t updatelink_s_tmp;
+//	updatelink_t *updatelink_tmp;
+//	updatelink_t updatelink_s_tmp;
+	u8 i;
 
 	if(cache.status != 0)
 	{
-		return ERROR3;
+		return FLASH_ERROR3;
 	}
 
 	spi_flash_read_data((myid << SPIFLASH_SECTOR_OFFSET), cache.cache, SPIFLASH_SECTOR_SIZE);
@@ -418,7 +421,7 @@ DEFAULT_RETURN_T cache_write(spiflashaddr_t myaddr, node_len_t mylen, u8 *mydata
 		return FLASH_ERROR8;
 	}
 
-	mem_cpy(&(cache.cache[addr_in_sector]), mydata, mylen);
+	mem_cpy(&(cache.cache[offset_tmp]), mydata, mylen);
 	cache.status = 1;
 
 	return FLASH_OK;
@@ -455,7 +458,7 @@ void spiflash_fs_first_init(void)
 
 	spi_flash_erase_all();
 
-	if(i = 0; i < 16 ; i++)
+	for(i = 0; i < 16 ; i++)
 	{
 		erase[i] = 0xff;
 	}
@@ -530,10 +533,10 @@ DEFAULT_RETURN_T spiflash_add_list(node_size_t mylen)
 	node_t	node_tmp;
 	node_t	*node_p_tmp;
 	node_id_t	id_my;
-	node_offset_t	offset_my;
+	node_offset_t	offset_tmp;
 	u16 i;
 	u8 *p;
-	node_size_t s0; s1;
+	node_size_t s0, s1;
 	linkhead_t lh_tmp;
 
 	node_tmp.size = mylen;
@@ -543,15 +546,15 @@ DEFAULT_RETURN_T spiflash_add_list(node_size_t mylen)
 		return (DEFAULT_RETURN_T)node_p_tmp;
 
 	id_my = node_tmp.addr >> SPIFLASH_SECTOR_OFFSET;
-	offset_my = node_tmp.addr & SPIFLASH_SECTOR_SIZE_MASK;
+	offset_tmp = node_tmp.addr & SPIFLASH_SECTOR_SIZE_MASK;
 
-	if((SPIFLASH_SECTOR_SIZE - offset_my) < INROM_LIST_SIZE)
+	if((SPIFLASH_SECTOR_SIZE - offset_tmp) < INROM_LIST_SIZE)
 		return FLASH_ERRORb;
 
-	if((offset_my + mylen + INROM_LIST_SIZE)& ~SPIFLASH_SECTOR_SIZE_MASK)
+	if((offset_tmp + mylen + INROM_LIST_SIZE)& ~SPIFLASH_SECTOR_SIZE_MASK)
 	{
-		s0 = SPIFLASH_SECTOR_SIZE - offset_my - INROM_LIST_SIZE;
-		s1 = (offset_my + mylen + INROM_LIST_SIZE) & SPIFLASH_SECTOR_SIZE_MASK;
+		s0 = SPIFLASH_SECTOR_SIZE - offset_tmp - INROM_LIST_SIZE;
+		s1 = (offset_tmp + mylen + INROM_LIST_SIZE) & SPIFLASH_SECTOR_SIZE_MASK;
 	}
 	else
 	{
@@ -620,11 +623,12 @@ DEFAULT_RETURN_T spiflash_add_list(node_size_t mylen)
 
 	return FLASH_OK;
 }
-
+/*
 DEFAULT_RETURN_T spiflash_tx_list(spiflashaddr_t myaddr)
 {
 
 }
+*/
 /*
  * this func is API, for tx&del list when mode = 0;
  * mode:
@@ -640,25 +644,29 @@ DEFAULT_RETURN_T spiflash_del_list(spiflashaddr_t myaddr, u8 mode)
 	node_id_t	id_my;
 	linkhead_t*   lk_p_tmp;
 	linkhead_t   lk_tmp;
-	linkhead_t   linkhead_tmp, linkheadpre_tmp;
+	linkhead_t   linkhead_s_tmp, linkheadpre_tmp;
+	linkhead_t   *linkhead_tmp;
 	u32 dsize_tmp;
-	node_offset_t	offset_my;
+	node_offset_t	offset_tmp;
+	node_size_t s0, s1;
+	u8 *p;
+	u16 i;
 
 	if(mode == 0)
 		myaddr = rom_mesg_s.vhead;
 
-	read_link_head(myaddr, &lk_tmp)
+	read_link_head(myaddr, &lk_tmp);
 	flash_data_read(myaddr + INROM_LIST_DATALEN_OFFSET, 4, &dsize_tmp);
 
 	id_my = lk_tmp.addr >> SPIFLASH_SECTOR_OFFSET;
-	offset_my = lk_tmp.addr & SPIFLASH_SECTOR_SIZE_MASK;
+	offset_tmp = lk_tmp.addr & SPIFLASH_SECTOR_SIZE_MASK;
 
 	if(mode == 0)
 	{
-		if((offset_my + dsize_tmp + INROM_lIST_SIZE)& ~SPIFLASH_SECTOR_SIZE_MASK)
+		if((offset_tmp + dsize_tmp + INROM_LIST_SIZE)& ~SPIFLASH_SECTOR_SIZE_MASK)
 		{
-			s0 = SPIFLASH_SECTOR_SIZE - offset_my - INROM_lIST_SIZE;
-			s1 = (offset_my + dsize_tmp + INROM_lIST_SIZE) & SPIFLASH_SECTOR_SIZE_MASK;
+			s0 = SPIFLASH_SECTOR_SIZE - offset_tmp - INROM_LIST_SIZE;
+			s1 = (offset_tmp + dsize_tmp + INROM_LIST_SIZE) & SPIFLASH_SECTOR_SIZE_MASK;
 		}
 		else
 		{
@@ -706,29 +714,31 @@ DEFAULT_RETURN_T spiflash_del_list(spiflashaddr_t myaddr, u8 mode)
 
 	if(myaddr == rom_mesg_s.vhead )
 	{
-		rom_mesg_s.vhead = lk_tmp->next;
+		rom_mesg_s.vhead = lk_tmp.next;
 		rom_mesg_s.dirty = 1;
 	}
 	else
 	{
-		linkhead_tmp = rom_mesg_s.vhead;
+		linkhead_tmp = read_link_head(rom_mesg_s.vhead, &linkhead_s_tmp);
 		while(linkhead_tmp != NULL)
 		{
-			if(my_addr == linkhead_tmp.next)
+			if(myaddr == linkhead_s_tmp.next)
 			{
 				break;
 			}
 
-			linkheadpre_tmp = linkhead_tmp;
-			linkhead_tmp = read_link_head(linkhead_tmp->next, &linkhead_s_tmp);
+			linkheadpre_tmp.addr = linkhead_s_tmp.addr;
+			linkheadpre_tmp.next = linkhead_s_tmp.next;
+			linkheadpre_tmp.size = linkhead_s_tmp.size;
+			linkhead_tmp = read_link_head(linkhead_s_tmp.next, &linkhead_s_tmp);
 
 		}
 
-		linkhead_tmp.addr = linkheadpre_tmp.addr;
-		linkhead_tmp.next = lk_tmp->next;
-		linkhead_tmp.size = NULL;
+		linkhead_s_tmp.addr = linkheadpre_tmp.addr;
+		linkhead_s_tmp.next = lk_tmp.next;
+		linkhead_s_tmp.size = NULL;
 
-		update_link_head(&lh_tmp);
+		update_link_head(&linkhead_s_tmp);
 
 	}
 
@@ -750,7 +760,7 @@ spiflashaddr_t * spiflash_find_list(node_len_t mylen)
 	u16 i, nf = 1;
 	u8 *p;
 	linkhead_t *linkhead_tmp;
-	linkhead_t linkhead_s_tmp, linkheadpro_s_tmp;
+	linkhead_t linkhead_s_tmp, linkheadpre_s_tmp;
 	spiflashaddr_t	faddr_tmp;
 	node_len_t len_tmp;
 
