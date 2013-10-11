@@ -86,7 +86,8 @@ struct cache{
 	 *		"3": write head information mode.
 	 */
 	u8  status;
-	u32 cache[512];
+	//u32 cache[512];
+	u8 cache[4096];
 }cache;
 /*
 typedef struct vlink{
