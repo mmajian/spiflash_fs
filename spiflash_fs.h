@@ -121,7 +121,7 @@ typedef struct vlink{
 #define INROM_LIST_DATALEN_OFFSET	0x8
 #define INROM_LIST_DATE_OFFSET	0xc
 #define INROM_LIST_SIZE		0x10
-#define INROM_lIST_DATA_OFFSET	0x10
+#define INROM_LIST_DATA_OFFSET	0x10
 /* map:
  * |--------------------------------------------------------
  * |

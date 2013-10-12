@@ -39,9 +39,12 @@ void spi_flash_erase_all(void)
 		dev[i]= 0xff;
 	return 0;
 }
+int abc;
 u8 rx_data(void)
 {
-	return 0xab;
+	if(abc == 0x20)
+		abc = 0;
+	return (0xab + abc);
 }
 void tx_data(u8 data)
 {
@@ -69,9 +72,11 @@ u8 mem_cmp(u8 *des, u8 *src, u32 size)
 }
 void main()
 {
+	int i;
 	spiflash_fs_init();
 		printf("--------------1--------\n");
-	spiflash_add_list(1024);
+	for(i = 0; i < 0x20; i++)
+		spiflash_add_list(1024);
 		printf("--------------2--------\n");
 	return;
 }
