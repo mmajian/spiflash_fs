@@ -12,15 +12,31 @@
 linkhead_t*  read_link_head(spiflashaddr_t myfaddr, linkhead_t* mylinkhead)
 {
 	node_t node_tmp;
+	node_id_t node_id;
+	u8 i;
 
 	if(myfaddr == NULL)
 		return NULL;
+	node_id = myfaddr >> SPIFLASH_SECTOR_OFFSET;
+
+	if((updatelink_num != 0) && (updatelink_buf[0].id == node_id))
+	{
+		for(i=0; i < updatelink_num; i++)
+		{
+			if(updatelink_buf[i].element.addr == myfaddr)
+			{
+				mylinkhead->next = updatelink_buf[i].element.next;
+				mylinkhead->size = updatelink_buf[i].element.size;
+				goto find;
+			}
+		}
+	}
 
 	flash_data_read(myfaddr, sizeof(node_t),&node_tmp);
-	mylinkhead->addr = myfaddr;
 	mylinkhead->next = node_tmp.addr;
 	mylinkhead->size = node_tmp.size;
-
+find:
+	mylinkhead->addr = myfaddr;
 	return mylinkhead;
 }
 
@@ -31,7 +47,7 @@ node_t* malloc_node(node_t *mynode)
 	spiflashaddr_t	faddrpre_tmp;
 	//updatelink_t	updatelink_tmp;
 	linkhead_t updatelink_tmp;
-	spiflashaddr_t	faddr_tmp;
+	spiflashaddr_t	f;
 	node_size_t		size_tmp;
 	u8 ok = 0;
 
@@ -46,17 +62,20 @@ node_t* malloc_node(node_t *mynode)
 	}
 	/*
 	 * Align to SPIFLASH_LINK_HEADSIZE
-	 * Head struct on flash don't across sector.
+	 * Head struct on flash don't across two sector.
 	 */
+	/*
 	if(mynode->size & SPIFLASH_LINK_HEADSIZE_MASK)
 	{
 		mynode->size = (mynode->size + SPIFLASH_IGNORE_SIZE) & ~(SPIFLASH_LINK_HEADSIZE_MASK);
 	}
+	*/
 
+	faddrpre_tmp = NULL;
 	while(linkhead_tmp != NULL)
 	{
 
-		faddr_tmp = linkhead_tmp->addr;
+//		faddr_tmp = linkhead_tmp->addr;
 		if(mynode->size <= linkhead_tmp->size)
 		{
 			ok = 1;
@@ -70,23 +89,34 @@ node_t* malloc_node(node_t *mynode)
 	if(ok == 0)
 		return NULL;
 
+	/*
+	 * Align to SPIFLASH_LINK_HEADSIZE
+	 * Head struct on flash don't across two sector.
+	 */
+	f = SPIFLASH_SECTOR_SIZE - ((linkhead_tmp->addr + mynode->size) & SPIFLASH_SECTOR_SIZE_MASK);
+	if(f < SPIFLASH_LINK_HEADSIZE)
+		mynode->size = mynode->size + f;
+
+
 	size_tmp = linkhead_tmp->size - mynode->size;
 
 	if(size_tmp  >= SPIFLASH_IGNORE_SIZE)
 	{
-		if(faddr_tmp == rom_mesg_s.rhead)
+		//if(linkhead_tmp->addr == rom_mesg_s.rhead)
+		if(faddrpre_tmp == NULL)
 		{
 			rom_mesg_s.rhead = linkhead_tmp->addr + mynode->size;
 			if(rom_mesg_s.rnum == 1)
 				rom_mesg_s.rtail = rom_mesg_s.rhead;
+
 
 			rom_mesg_s.dirty = 1;
 
 		}
 		else
 		{
-			if(faddr_tmp == rom_mesg_s.rtail)
-				rom_mesg_s.rtail = faddr_tmp;
+			if(linkhead_tmp->addr == rom_mesg_s.rtail)
+				rom_mesg_s.rtail = linkhead_tmp->addr;
 
 			updatelink_tmp.addr = faddrpre_tmp;
 			updatelink_tmp.next = linkhead_tmp->addr + mynode->size;
@@ -94,8 +124,12 @@ node_t* malloc_node(node_t *mynode)
 		}
 
 		updatelink_tmp.addr = linkhead_tmp->addr + mynode->size;
-		//updatelink_tmp.next = linkhead_tmp->next;
-		updatelink_tmp.next = NEXT_NULL;
+
+		if(linkhead_tmp->next == NULL)
+			updatelink_tmp.next = NEXT_NULL;
+		else
+			updatelink_tmp.next = linkhead_tmp->next;
+
 		updatelink_tmp.size = size_tmp;
 //		updatelink_tmp.date = NULL;
 
@@ -117,14 +151,15 @@ node_t* malloc_node(node_t *mynode)
 		else
 		{
 
-			if(faddr_tmp == rom_mesg_s.rhead)
+		//	if(linkhead_tmp->addr == rom_mesg_s.rhead)
+			if(faddrpre_tmp == NULL)
 			{
 				rom_mesg_s.rhead = linkhead_tmp->addr + mynode->size;
 
 			}
 			else
 			{
-				if(faddr_tmp == rom_mesg_s.rtail)
+				if(linkhead_tmp->addr == rom_mesg_s.rtail)
 					rom_mesg_s.rtail = faddrpre_tmp;
 
 				updatelink_tmp.addr = faddrpre_tmp;
@@ -284,30 +319,28 @@ start:
 			cache_write(myupdatelink->addr + INROM_LIST_SIZE_OFFSET, 0x4, (u8 *)&myupdatelink->size);
 
 	}
-	else if((updatelink_num != 0)&&(updatelink_buf[i].id != id_tmp))
+	else if((updatelink_num != 0)&&(updatelink_buf[0].id != id_tmp))
 	{
 			cache_store();
+			cache_load(updatelink_buf[0].id);
 			goto start;
 	}
 	else
 	{
-		for(i=0; i < UPDATE_NUM; i++)
-		{
-			if(updatelink_buf[i].id==NULL)
+			if(updatelink_num > UPDATE_NUM)
 			{
-				updatelink_buf[i].id = id_tmp;
-				updatelink_buf[i].element.addr = myupdatelink->addr;
-				updatelink_buf[i].element.next = myupdatelink->next;
-				updatelink_buf[i].element.size = myupdatelink->size;
-				updatelink_num = i+1;
-				break;
+				printf("-------------ERROR--------------------------------------\n");
+				return FLASH_ERROR4;
 			}
-		}
+			if(( updatelink_num == 0 )|| (updatelink_buf[updatelink_num-1].id == id_tmp))
+			{
+				updatelink_buf[updatelink_num].id = id_tmp;
+				updatelink_buf[updatelink_num].element.addr = myupdatelink->addr;
+				updatelink_buf[updatelink_num].element.next = myupdatelink->next;
+				updatelink_buf[updatelink_num].element.size = myupdatelink->size;
+				updatelink_num ++;
+			}
 	}
-
-	if(i == UPDATE_NUM)
-		return FLASH_ERROR4;
-
 	return FLASH_OK;
 }
 
@@ -328,7 +361,7 @@ DEFAULT_RETURN_T cache_load(node_id_t myid)
 
 	if(updatelink_buf[0].id == myid)
 	{
-		for(i=0; (i < UPDATE_NUM) && (updatelink_buf[i].id != NULL); i++)
+		for(i=0; (i < updatelink_num) && (updatelink_buf[i].id != NULL); i++)
 		{
 			update_link_head(&updatelink_buf[i].element);
 		}

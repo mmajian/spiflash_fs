@@ -76,7 +76,9 @@ void main()
 	spiflash_fs_init();
 		printf("--------------1--------\n");
 	for(i = 0; i < 0x20; i++)
-		spiflash_add_list(1024);
-		printf("--------------2--------\n");
+	{
+		spiflash_add_list(1023);
+		printf("--------------2-:%08x-------\n",i);
+	}
 	return;
 }
