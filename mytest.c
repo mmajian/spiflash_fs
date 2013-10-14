@@ -54,6 +54,14 @@ u32 get_time()
 {
 	return 0;
 }
+void mem_set(u8 *des, u8 data, u32 size)
+{
+	u32 i;
+	for(i = 0 ; i < size; i++)
+		des[i] = data;
+
+	return ;
+}
 void mem_cpy(u8 *des, u8 *src, u32 size)
 {
 	u32 i;
@@ -70,15 +78,27 @@ u8 mem_cmp(u8 *des, u8 *src, u32 size)
 			return 1;
 	return 0;
 }
+#define NULL 0
 void main()
 {
 	int i;
+	u32 ret;
 	spiflash_fs_init();
 		printf("--------------1--------\n");
-	for(i = 0; i < 0x20; i++)
+	for(i = 0; ; i++)
 	{
-		spiflash_add_list(1023);
+		if(i==0x1f7c)
+			printf("--------------1--------\n");
+		ret = spiflash_add_list(1024);
+		if(ret == NULL)
+		{
+			printf("-------------full!!!!!-------\n");
+			break;
+		}
 		printf("--------------2-:%08x-------\n",i);
 	}
+
+	spiflash_final_update();
+
 	return;
 }

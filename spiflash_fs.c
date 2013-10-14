@@ -87,7 +87,9 @@ node_t* malloc_node(node_t *mynode)
 	}
 
 	if(ok == 0)
+	{
 		return NULL;
+	}
 
 	/*
 	 * Align to SPIFLASH_LINK_HEADSIZE
@@ -172,6 +174,9 @@ node_t* malloc_node(node_t *mynode)
 		mynode->size = linkhead_tmp->size;
 
 	}
+
+	rom_mesg_s.vnum ++;
+	rom_mesg_s.dirty = 1;
 
 	return mynode;
 
@@ -377,8 +382,8 @@ DEFAULT_RETURN_T cache_load(node_id_t myid)
 
 DEFAULT_RETURN_T cache_store(void)
 {
-	u8 index_tmp;
-	u8 offset_tmp;
+	u16 index_tmp;
+	u16 offset_tmp;
 	u8 mask_tmp;
 
 	if(cache.status == 3)
@@ -398,9 +403,14 @@ DEFAULT_RETURN_T cache_store(void)
 	}
 
 mesg_store:
-	index_tmp = cache.id >> (SPIFLASH_BLOCK_OFFSET - SPIFLASH_SECTOR_OFFSET);
+	index_tmp = cache.id >> (SPIFLASH_BLOCK_OFFSET - SPIFLASH_SECTOR_OFFSET );
 	offset_tmp = cache.id & 0xf ;
 
+	if(offset_tmp >= 8)
+	{
+		index_tmp ++;
+		offset_tmp = offset_tmp & 0x7;
+	}
 	if((erase[index_tmp] & (1<<offset_tmp)) == 0)
 	{
 		spi_flash_erase_sector(cache.id);
@@ -503,6 +513,8 @@ DEFAULT_RETURN_T cache_write(spiflashaddr_t myaddr, node_len_t mylen, u8 *mydata
 
 DEFAULT_RETURN_T update_rom_mesg(rom_mesg_t *mymesg)
 {
+	u32 i;
+
 	if(cache.status != 3)
 		return FLASH_ERROR9;
 
@@ -511,9 +523,11 @@ DEFAULT_RETURN_T update_rom_mesg(rom_mesg_t *mymesg)
 
 	cache.id = 0;
 
+	mem_set(cache.cache,0xff,SPIFLASH_SECTOR_SIZE);
 	cache_write(INROM_MAGIC_OFFSET, sizeof(rom_mesg_t)-4, (u8 *)mymesg);
 	cache_write(INROM_ERASE_OFFSET, INROM_ERASE_SIZE, erase);
 
+	mymesg->dirty == 0;
 	return FLASH_OK;
 	/*
 	cache_write(INROM_MAGIC_OFFSET, 0x4, (u8 *)&mymesg->vhead);
@@ -527,12 +541,12 @@ DEFAULT_RETURN_T update_rom_mesg(rom_mesg_t *mymesg)
 }
 void spiflash_fs_first_init(void)
 {
-	u8 i;
+	u32 i;
 	linkhead_t linkhead_s_tmp;
 
 	spi_flash_erase_all();
 
-	for(i = 0; i < 16 ; i++)
+	for(i = 0; i < INROM_ERASE_SIZE ; i++)
 	{
 		erase[i] = 0xff;
 	}
@@ -542,7 +556,7 @@ void spiflash_fs_first_init(void)
 	linkhead_s_tmp.addr = SPIFLASH_FS_DATA_SADDR;
 	linkhead_s_tmp.next = NEXT_NULL;
 	//linkhead_s_tmp.size = 0x800000 - 0x1000 - INROM_LIST_SIZE;
-	linkhead_s_tmp.size = 0x800000 - 0x1000;
+	linkhead_s_tmp.size = SPIFLASH_SIZE - 0x1000;
 	update_link_head(&linkhead_s_tmp);
 	cache_store();
 
@@ -629,7 +643,7 @@ DEFAULT_RETURN_T spiflash_add_list(node_size_t mylen)
 	node_p_tmp = malloc_node(&node_tmp);
 
 	if( !node_p_tmp)
-		return FLASH_ERROR1;
+		return NULL;
 
 	id_my = node_tmp.addr >> SPIFLASH_SECTOR_OFFSET;
 	offset_tmp = node_tmp.addr & SPIFLASH_SECTOR_SIZE_MASK;
@@ -842,6 +856,7 @@ DEFAULT_RETURN_T spiflash_del_list(spiflashaddr_t myaddr, u8 mode)
 		rom_mesg_s.dirty = 1;
 	}
 
+	rom_mesg_s.vnum --;
 	node_tmp.addr = myaddr;
 	node_tmp.size = lk_tmp.size;
 	free_node(&node_tmp);
@@ -919,3 +934,19 @@ DEFAULT_RETURN_T spiflash_remvoe_list(node_len_t mylen)
 		return 0;
 }
 
+void spiflash_final_update(void)
+{
+	if(cache.status == 1)
+		cache_store();
+	if(updatelink_num != 0)
+	{
+		cache_load(updatelink_buf[0].id);
+		cache_store();
+	}
+	if(rom_mesg_s.dirty == 1)
+	{
+		cache.status = 3;
+		update_rom_mesg(&rom_mesg_s);
+		cache_store();
+	}
+}

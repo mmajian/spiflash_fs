@@ -53,6 +53,7 @@ extern u32 get_time();
 #define SPIFLASH_SECTOR_SIZE_MASK (SPIFLASH_SECTOR_SIZE-1)
 #define SPIFLASH_LINK_HEADSIZE 0x10
 #define SPIFLASH_LINK_HEADSIZE_MASK (SPIFLASH_LINK_HEADSIZE-1)
+#define SPIFLASH_SIZE	0x800000
 
 
 typedef u32 spiflashaddr_t;
@@ -69,13 +70,14 @@ cache_read(node_offset_t myaddr, node_len_t mylen, u8 *mydata);
 cache_store(void);
 */
 
-//u8 erase[256];/*TODO block */
+#define INROM_ERASE_SIZE	256
+u8 erase[256];/*TODO block */
 /*
  * erase:
  *		1: erased,can used;
  *		0: non't  erased, can't used;
  */
-u8 erase[16];	/* block number */
+//u8 erase[16];	/* block number */
 
 struct cache{
 	node_id_t id;
@@ -114,7 +116,6 @@ typedef struct vlink{
 #define INROM_RNUM_OFFSET	0x18
 
 #define INROM_ERASE_OFFSET	0x100
-#define INROM_ERASE_SIZE	0x10
 
 #define INROM_LIST_NEXT_OFFSET	0x0
 #define INROM_LIST_SIZE_OFFSET	0x4
@@ -122,6 +123,7 @@ typedef struct vlink{
 #define INROM_LIST_DATE_OFFSET	0xc
 #define INROM_LIST_SIZE		0x10
 #define INROM_LIST_DATA_OFFSET	0x10
+
 /* map:
  * |--------------------------------------------------------
  * |
