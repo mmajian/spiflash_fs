@@ -39,7 +39,12 @@ void spi_flash_erase_all(void)
 		dev[i]= 0xff;
 	return 0;
 }
+
 int abc;
+int abd = 0;
+int abd_old = 0;
+u8 tx_buf[4*1024];
+u8 *tx_p;
 u8 rx_data(void)
 {
 	if(abc == 0x20)
@@ -48,6 +53,17 @@ u8 rx_data(void)
 }
 void tx_data(u8 data)
 {
+	if(add != abd_old)
+	{
+		abd_old = abd;
+		tx_p = tx_buf;
+	}
+
+	if(adb == abc__old)
+	{
+		*(tx_p) = data;
+		tx_p ++;
+	}
 	return 0;
 }
 u32 get_time()

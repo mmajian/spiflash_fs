@@ -802,6 +802,7 @@ DEFAULT_RETURN_T spiflash_del_list(spiflashaddr_t myaddr, u8 mode)
 
 		p = &cache.cache[offset_tmp + INROM_LIST_DATA_OFFSET];
 
+
 		for(i = 0; i < s0; i++,p++)
 		{
 			tx_data(*p);
@@ -818,6 +819,7 @@ DEFAULT_RETURN_T spiflash_del_list(spiflashaddr_t myaddr, u8 mode)
 				tx_data(*p);
 			}
 		}
+		abd++;
 	}
 
 	if(myaddr == rom_mesg_s.vhead )
