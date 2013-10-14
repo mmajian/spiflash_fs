@@ -41,7 +41,7 @@ void spi_flash_erase_all(void)
 }
 
 int abc;
-int abd = 0;
+int abd = 1;
 int abd_old = 0;
 u8 tx_buf[4*1024];
 u8 *tx_p;
@@ -53,13 +53,13 @@ u8 rx_data(void)
 }
 void tx_data(u8 data)
 {
-	if(add != abd_old)
+	if(abd != abd_old)
 	{
 		abd_old = abd;
 		tx_p = tx_buf;
 	}
 
-	if(adb == abc__old)
+	if(abd == abd_old)
 	{
 		*(tx_p) = data;
 		tx_p ++;
@@ -103,8 +103,6 @@ void main()
 		printf("--------------1--------\n");
 	for(i = 0; ; i++)
 	{
-		if(i==0x1f7c)
-			printf("--------------1--------\n");
 		ret = spiflash_add_list(1024);
 		if(ret == NULL)
 		{
@@ -116,5 +114,16 @@ void main()
 
 	spiflash_final_update();
 
+	for(i = 0; ; i++)
+	{
+		ret = spiflash_sequence_tx();
+		if(ret == NULL)
+		{
+			printf("-------------empty!!!!!-------\n");
+			break;
+		}
+		printf("-------------del :%08x--------\n",i);
+	}
+		printf("--------------3--------\n");
 	return;
 }

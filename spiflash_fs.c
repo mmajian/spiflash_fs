@@ -187,12 +187,20 @@ DEFAULT_RETURN_T free_node(node_t *mynode)
 	linkhead_t *linkhead_tmp;
 	linkhead_t linkhead_s_tmp;
 	linkhead_t updatelink_s_tmp;
-	linkhead_t *linkheadpre_tmp;
+	linkhead_t linkheadpre_tmp;
 	u8 ok = 0;
 	node_size_t size_tmp;
 
-	linkhead_tmp = read_link_head(rom_mesg_s.rhead, &linkhead_s_tmp);
-	linkheadpre_tmp = linkhead_tmp;
+	if(rom_mesg_s.rhead == NULL)
+	{
+		ok = 1;
+		linkhead_tmp = NULL;
+		linkhead_s_tmp.addr = NULL;
+	}
+	else
+		linkhead_tmp = read_link_head(rom_mesg_s.rhead, &linkhead_s_tmp);
+
+	linkheadpre_tmp.addr = NULL;
 
 	if((mynode == NULL )|| (mynode->size == NULL))
 			return FLASH_ERROR3;
@@ -205,50 +213,64 @@ DEFAULT_RETURN_T free_node(node_t *mynode)
 			break;
 		}
 
-		linkheadpre_tmp = linkhead_tmp;
+		linkheadpre_tmp.addr = linkhead_tmp->addr;
+		linkheadpre_tmp.next = linkhead_tmp->next;
+		linkheadpre_tmp.size = linkhead_tmp->size;
+
 		linkhead_tmp = read_link_head(linkhead_tmp->next, &linkhead_s_tmp);
 
 	}
 
 		if(ok == 0)
 		{
-			if(mynode->addr == (linkheadpre_tmp->size + linkheadpre_tmp->addr))
+			if(mynode->addr == (linkheadpre_tmp.size + linkheadpre_tmp.addr))
 			{
-				updatelink_s_tmp.addr = linkheadpre_tmp->addr;
-				updatelink_s_tmp.size = linkheadpre_tmp->size + mynode->size;
+				updatelink_s_tmp.addr = linkheadpre_tmp.addr;
+				updatelink_s_tmp.size = linkheadpre_tmp.size + mynode->size;
 				update_link_head(&updatelink_s_tmp);
 			}
 			else
 			{
 				updatelink_s_tmp.addr = mynode->addr;
 				updatelink_s_tmp.size = mynode->size;
+				updatelink_s_tmp.next = NEXT_NULL;
 				update_link_head(&updatelink_s_tmp);
 
-				updatelink_s_tmp.addr = linkheadpre_tmp->addr;
+				updatelink_s_tmp.addr = linkheadpre_tmp.addr;
 				updatelink_s_tmp.next = mynode->addr;
 				update_link_head(&updatelink_s_tmp);
+
+				rom_mesg_s.rtail =  mynode->addr;
+				rom_mesg_s.rnum ++;
+				rom_mesg_s.dirty = 1;
+
 			}
 		}
 		else
 		{
-			if(linkheadpre_tmp == linkhead_tmp)
+			if(linkheadpre_tmp.addr == NULL)
 			{
-				if(linkhead_tmp->addr == (mynode->size + mynode->addr))
+				if(linkhead_s_tmp.addr == (mynode->size + mynode->addr))
 				{
 					updatelink_s_tmp.addr = mynode->addr;
 					updatelink_s_tmp.size = linkhead_tmp->size + mynode->size;
-					updatelink_s_tmp.next = linkhead_tmp->next;
+					updatelink_s_tmp.next = linkhead_tmp->next ? linkhead_tmp->next:NEXT_NULL;
 					update_link_head(&updatelink_s_tmp);
 				}
-				else
+				else // when rlink is NULl .also run this
 				{
 					updatelink_s_tmp.addr = mynode->addr;
 					updatelink_s_tmp.size = mynode->size;
-					updatelink_s_tmp.next = linkheadpre_tmp->addr;
+					updatelink_s_tmp.next = linkhead_s_tmp.addr ? linkhead_s_tmp.addr:NEXT_NULL;
 					update_link_head(&updatelink_s_tmp);
+
+					if(rom_mesg_s.rnum == 0)
+						rom_mesg_s.rtail =  mynode->addr;
+					rom_mesg_s.rnum ++;
 				}
 
 				rom_mesg_s.rhead =  mynode->addr;
+				rom_mesg_s.dirty = 1;
 			}
 			else
 			{
@@ -259,29 +281,25 @@ DEFAULT_RETURN_T free_node(node_t *mynode)
 					updatelink_s_tmp.next = linkhead_tmp->next;
 					update_link_head(&updatelink_s_tmp);
 				}
-				else
+				else if(mynode->addr == (linkheadpre_tmp.size + linkheadpre_tmp.addr))
 				{
-					updatelink_s_tmp.addr = mynode->addr;
-					updatelink_s_tmp.size = mynode->size;
-					updatelink_s_tmp.next = linkheadpre_tmp->addr;
-					update_link_head(&updatelink_s_tmp);
-				}
-
-				if(mynode->addr == (linkheadpre_tmp->size + linkheadpre_tmp->addr))
-				{
-					updatelink_s_tmp.addr = linkheadpre_tmp->addr;
-					updatelink_s_tmp.size = linkheadpre_tmp->size + mynode->size;
+					updatelink_s_tmp.addr = linkheadpre_tmp.addr;
+					updatelink_s_tmp.size = linkheadpre_tmp.size + mynode->size;
 					update_link_head(&updatelink_s_tmp);
 				}
 				else
 				{
 					updatelink_s_tmp.addr = mynode->addr;
 					updatelink_s_tmp.size = mynode->size;
+					updatelink_s_tmp.next = linkhead_tmp->addr;
 					update_link_head(&updatelink_s_tmp);
 
-					updatelink_s_tmp.addr = linkheadpre_tmp->addr;
+					updatelink_s_tmp.addr = linkheadpre_tmp.addr;
 					updatelink_s_tmp.next = mynode->addr;
 					update_link_head(&updatelink_s_tmp);
+
+					rom_mesg_s.rnum ++;
+					rom_mesg_s.dirty = 1;
 				}
 			}
 		}
@@ -628,6 +646,8 @@ DEFAULT_RETURN_T spiflash_fs_init(void)
  *
  */
 extern int abc;
+extern int abd;
+extern int abd_old;
 DEFAULT_RETURN_T spiflash_add_list(node_size_t mylen)
 {
 	node_t	node_tmp;
@@ -799,10 +819,16 @@ DEFAULT_RETURN_T spiflash_del_list(spiflashaddr_t myaddr, u8 mode)
 			cache_load(id_my);
 		}
 
+		/* first tx length of data */
+		p = &cache.cache[offset_tmp + INROM_LIST_DATALEN_OFFSET];
 
+		for(i = 0; i < 4; i++)
+		{
+			tx_data(p[i]);
+		}
+
+		/* tx  data */
 		p = &cache.cache[offset_tmp + INROM_LIST_DATA_OFFSET];
-
-
 		for(i = 0; i < s0; i++,p++)
 		{
 			tx_data(*p);
@@ -951,4 +977,13 @@ void spiflash_final_update(void)
 		update_rom_mesg(&rom_mesg_s);
 		cache_store();
 	}
+}
+DEFAULT_RETURN_T spiflash_sequence_tx(void)
+{
+	if(rom_mesg_s.vhead == NULL)
+		return NULL;
+
+	spiflash_del_list(rom_mesg_s.vhead, 0);
+		return FLASH_OK;
+
 }
