@@ -227,6 +227,8 @@ DEFAULT_RETURN_T free_node(node_t *mynode)
 			{
 				updatelink_s_tmp.addr = linkheadpre_tmp.addr;
 				updatelink_s_tmp.size = linkheadpre_tmp.size + mynode->size;
+				updatelink_s_tmp.next = NULL;
+
 				update_link_head(&updatelink_s_tmp);
 			}
 			else
@@ -355,6 +357,20 @@ start:
 				printf("-------------ERROR--------------------------------------\n");
 				return FLASH_ERROR4;
 			}
+
+			if(updatelink_num != 0)
+			{
+				for(i = 0; i < updatelink_num; i++)
+				{
+					if(updatelink_buf[i].element.addr == myupdatelink->addr)
+					{
+						updatelink_buf[i].element.next = myupdatelink->next;
+						updatelink_buf[i].element.size = myupdatelink->size;
+						return FLASH_OK;
+					}
+				}
+			}
+
 			if(( updatelink_num == 0 )|| (updatelink_buf[updatelink_num-1].id == id_tmp))
 			{
 				updatelink_buf[updatelink_num].id = id_tmp;
@@ -847,6 +863,8 @@ DEFAULT_RETURN_T spiflash_del_list(spiflashaddr_t myaddr, u8 mode)
 		}
 		abd++;
 	}
+    /*init this data, in order to case if "myaddr == rom_mesg_s.vtail" this case maybe don't init when vlink num is "1" */
+	linkheadpre_tmp.addr = NULL;
 
 	if(myaddr == rom_mesg_s.vhead )
 	{
@@ -858,7 +876,7 @@ DEFAULT_RETURN_T spiflash_del_list(spiflashaddr_t myaddr, u8 mode)
 		linkhead_tmp = read_link_head(rom_mesg_s.vhead, &linkhead_s_tmp);
 		while(linkhead_tmp != NULL)
 		{
-			if(myaddr == linkhead_s_tmp.next)
+			if(myaddr == linkhead_s_tmp.addr)
 			{
 				break;
 			}
@@ -870,7 +888,8 @@ DEFAULT_RETURN_T spiflash_del_list(spiflashaddr_t myaddr, u8 mode)
 
 		}
 
-		linkhead_s_tmp.addr = linkheadpre_tmp.addr;
+		linkhead_s_tmp.addr = linkheadpre_tmp.addr ;
+		//linkhead_s_tmp.next = lk_tmp.next ? lk_tmp.next:NEXT_NULL ;
 		linkhead_s_tmp.next = lk_tmp.next;
 		linkhead_s_tmp.size = NULL;
 

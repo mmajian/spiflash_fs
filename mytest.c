@@ -116,6 +116,8 @@ void main()
 
 	for(i = 0; ; i++)
 	{
+		if(i == 0x1f7d)
+			printf("--------------3--------\n");
 		ret = spiflash_sequence_tx();
 		if(ret == NULL)
 		{
@@ -124,6 +126,7 @@ void main()
 		}
 		printf("-------------del :%08x--------\n",i);
 	}
+	spiflash_final_update();
 		printf("--------------3--------\n");
 	return;
 }
