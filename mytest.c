@@ -103,7 +103,7 @@ void main()
 		printf("--------------1--------\n");
 	for(i = 0; ; i++)
 	{
-		ret = spiflash_add_list(1024);
+		ret = spiflash_add_list(1023);
 		if(ret == NULL)
 		{
 			printf("-------------full!!!!!-------\n");
@@ -116,7 +116,7 @@ void main()
 
 	for(i = 0; ; i++)
 	{
-		if(i == 0x1f7d)
+		if(i == 0x1f84)
 			printf("--------------3--------\n");
 		ret = spiflash_sequence_tx();
 		if(ret == NULL)

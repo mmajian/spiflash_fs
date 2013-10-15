@@ -188,7 +188,9 @@ DEFAULT_RETURN_T free_node(node_t *mynode)
 	linkhead_t linkhead_s_tmp;
 	linkhead_t updatelink_s_tmp;
 	linkhead_t linkheadpre_tmp;
+	spiflashaddr_t	next_tmp;
 	u8 ok = 0;
+	u8 connect = 0;
 	node_size_t size_tmp;
 
 	if(rom_mesg_s.rhead == NULL)
@@ -244,6 +246,7 @@ DEFAULT_RETURN_T free_node(node_t *mynode)
 
 				rom_mesg_s.rtail =  mynode->addr;
 				rom_mesg_s.rnum ++;
+				printf("--------------hahahhaha------------------------------\n");
 				rom_mesg_s.dirty = 1;
 
 			}
@@ -269,6 +272,7 @@ DEFAULT_RETURN_T free_node(node_t *mynode)
 					if(rom_mesg_s.rnum == 0)
 						rom_mesg_s.rtail =  mynode->addr;
 					rom_mesg_s.rnum ++;
+				printf("--------------hahahhaha-----2------------------------\n");
 				}
 
 				rom_mesg_s.rhead =  mynode->addr;
@@ -280,16 +284,27 @@ DEFAULT_RETURN_T free_node(node_t *mynode)
 				{
 					updatelink_s_tmp.addr = mynode->addr;
 					updatelink_s_tmp.size = linkhead_tmp->size + mynode->size;
-					updatelink_s_tmp.next = linkhead_tmp->next;
+					updatelink_s_tmp.next = linkhead_tmp->next ? linkhead_tmp->next:NEXT_NULL;
 					update_link_head(&updatelink_s_tmp);
+					connect =1;
 				}
-				else if(mynode->addr == (linkheadpre_tmp.size + linkheadpre_tmp.addr))
+				if(mynode->addr == (linkheadpre_tmp.size + linkheadpre_tmp.addr))
 				{
+					next_tmp = NULL;
+					if(connect == 1)
+					{
+						mynode->size = linkhead_tmp->size + mynode->size;
+						//next_tmp = linkhead_tmp->next ? linkhead_tmp->next:NEXT_NULL;
+						next_tmp = updatelink_s_tmp.next;
+						rom_mesg_s.rnum --;
+					}
 					updatelink_s_tmp.addr = linkheadpre_tmp.addr;
 					updatelink_s_tmp.size = linkheadpre_tmp.size + mynode->size;
+					updatelink_s_tmp.next = next_tmp;
 					update_link_head(&updatelink_s_tmp);
+					connect =1;
 				}
-				else
+				if(connect == 0)
 				{
 					updatelink_s_tmp.addr = mynode->addr;
 					updatelink_s_tmp.size = mynode->size;
@@ -298,9 +313,11 @@ DEFAULT_RETURN_T free_node(node_t *mynode)
 
 					updatelink_s_tmp.addr = linkheadpre_tmp.addr;
 					updatelink_s_tmp.next = mynode->addr;
+					updatelink_s_tmp.size = NULL;
 					update_link_head(&updatelink_s_tmp);
 
 					rom_mesg_s.rnum ++;
+				printf("--------------hahahhaha--3---------------------------\n");
 					rom_mesg_s.dirty = 1;
 				}
 			}
