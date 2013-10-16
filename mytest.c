@@ -103,7 +103,37 @@ void main()
 		printf("--------------1--------\n");
 	for(i = 0; ; i++)
 	{
-		ret = spiflash_add_list(1023);
+		printf("--------------2-:%08x-------\n",i);
+		ret = spiflash_add_list(1020);
+		if(ret == NULL)
+		{
+			printf("-------------full!!!!!-------\n");
+			break;
+		}
+	}
+
+		printf("--------------test--------\n");
+	spiflash_final_update();
+
+#if 0
+	for(i = 0; i< 0x1000 ; i++)
+	{
+		printf("-------------del :%08x--------\n",i);
+		ret = spiflash_sequence_tx();
+		if(ret == NULL)
+		{
+			printf("-------------empty!!!!!-------\n");
+			break;
+		}
+	}
+#else
+		ret = spiflash_sequence_tx();
+#endif
+#if 1
+	spiflash_final_update();
+	for(i = 0; ; i++)
+	{
+		ret = spiflash_add_list(400);
 		if(ret == NULL)
 		{
 			printf("-------------full!!!!!-------\n");
@@ -111,22 +141,10 @@ void main()
 		}
 		printf("--------------2-:%08x-------\n",i);
 	}
+#endif
 
-	spiflash_final_update();
-
-	for(i = 0; ; i++)
-	{
-		if(i == 0x1f84)
-			printf("--------------3--------\n");
-		ret = spiflash_sequence_tx();
-		if(ret == NULL)
-		{
-			printf("-------------empty!!!!!-------\n");
-			break;
-		}
-		printf("-------------del :%08x--------\n",i);
-	}
 	spiflash_final_update();
 		printf("--------------3--------\n");
+
 	return;
 }

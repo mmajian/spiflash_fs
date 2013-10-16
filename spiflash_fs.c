@@ -14,6 +14,7 @@ linkhead_t*  read_link_head(spiflashaddr_t myfaddr, linkhead_t* mylinkhead)
 	node_t node_tmp;
 	node_id_t node_id;
 	u8 i;
+	u8 update = 0;
 
 	if(myfaddr == NULL)
 		return NULL;
@@ -25,14 +26,41 @@ linkhead_t*  read_link_head(spiflashaddr_t myfaddr, linkhead_t* mylinkhead)
 		{
 			if(updatelink_buf[i].element.addr == myfaddr)
 			{
-				mylinkhead->next = updatelink_buf[i].element.next;
-				mylinkhead->size = updatelink_buf[i].element.size;
+				if(updatelink_buf[i].element.next == NEXT_NULL)
+					mylinkhead->next = NULL;
+				else if(updatelink_buf[i].element.next == NULL)
+				{
+					update = 1;
+					goto refind;
+				}
+				else
+					mylinkhead->next = updatelink_buf[i].element.next;
+				if(updatelink_buf[i].element.size == NULL)
+				{
+					update = 2;
+					goto refind;
+				}
+				else
+					mylinkhead->size = updatelink_buf[i].element.size;
+
 				goto find;
 			}
 		}
 	}
 
+refind:
 	flash_data_read(myfaddr, sizeof(node_t),&node_tmp);
+	if(update == 1)
+	{
+		updatelink_buf[i].element.next = node_tmp.addr;
+		node_tmp.size = updatelink_buf[i].element.size;
+	}
+	if(update == 2)
+	{
+		updatelink_buf[i].element.size = node_tmp.size;
+		node_tmp.addr = updatelink_buf[i].element.next;
+	}
+
 	mylinkhead->next = node_tmp.addr;
 	mylinkhead->size = node_tmp.size;
 find:
@@ -156,7 +184,8 @@ node_t* malloc_node(node_t *mynode)
 		//	if(linkhead_tmp->addr == rom_mesg_s.rhead)
 			if(faddrpre_tmp == NULL)
 			{
-				rom_mesg_s.rhead = linkhead_tmp->addr + mynode->size;
+				//rom_mesg_s.rhead = linkhead_tmp->addr + mynode->size;
+				rom_mesg_s.rhead = linkhead_tmp->next;
 
 			}
 			else
@@ -246,7 +275,6 @@ DEFAULT_RETURN_T free_node(node_t *mynode)
 
 				rom_mesg_s.rtail =  mynode->addr;
 				rom_mesg_s.rnum ++;
-				printf("--------------hahahhaha------------------------------\n");
 				rom_mesg_s.dirty = 1;
 
 			}
@@ -272,7 +300,6 @@ DEFAULT_RETURN_T free_node(node_t *mynode)
 					if(rom_mesg_s.rnum == 0)
 						rom_mesg_s.rtail =  mynode->addr;
 					rom_mesg_s.rnum ++;
-				printf("--------------hahahhaha-----2------------------------\n");
 				}
 
 				rom_mesg_s.rhead =  mynode->addr;
@@ -317,7 +344,6 @@ DEFAULT_RETURN_T free_node(node_t *mynode)
 					update_link_head(&updatelink_s_tmp);
 
 					rom_mesg_s.rnum ++;
-				printf("--------------hahahhaha--3---------------------------\n");
 					rom_mesg_s.dirty = 1;
 				}
 			}
@@ -337,6 +363,7 @@ DEFAULT_RETURN_T update_link_head(linkhead_t *myupdatelink)
 	linkhead_t *linkhead_tmp;
 //	updatelink_t *updatelink_tmp;
 	u8 i;
+	u32 tmp = 0;
 
 
 start:
@@ -353,8 +380,9 @@ start:
 		if(myupdatelink->next)
 		{
 			if(myupdatelink->next == NEXT_NULL)
-				myupdatelink->next = NULL;
-			cache_write(myupdatelink->addr + INROM_LIST_NEXT_OFFSET, 0x4, (u8 *)&myupdatelink->next);
+				cache_write(myupdatelink->addr + INROM_LIST_NEXT_OFFSET, 0x4, (u8 *)&tmp);
+			else
+				cache_write(myupdatelink->addr + INROM_LIST_NEXT_OFFSET, 0x4, (u8 *)&myupdatelink->next);
 		}
 
 		if(myupdatelink->size)
@@ -397,6 +425,10 @@ start:
 				updatelink_num ++;
 			}
 	}
+
+	if(myupdatelink->next == NEXT_NULL)
+		rom_mesg_s.rtail = myupdatelink->addr;
+
 	return FLASH_OK;
 }
 
