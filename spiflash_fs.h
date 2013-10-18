@@ -82,11 +82,15 @@ u8 erase[256];/*TODO block */
 struct cache{
 	node_id_t id;
 	/*
-	 *status: 
-	 *		"0": isn't dirty data;
-	 *		"1": dirty data, cache is noncohernet with flash, must write back.
-	 *		"2": big data compare mode, cache.cache two part of size 2k.
-	 *		"3": write head information mode.
+	 *	id		status: 
+	 *	"0"		"0":	 cache empty.
+	 *	"0"		"1":	 none.
+	 *	"0"		"2":	 big data compare mode, cache.cache two part of size 2k.
+	 *	"0"		"3":	 write head information mode.
+	 *	"1+"	"0":	 cache data valid ,and isn't dirty data;
+	 *	"1+"	"1":	 cache data valid ,and dirty data, cache is noncohernet with flash, must write back.
+	 *	"1+"	"2":	 none.
+	 *	"1+"	"3":	 none.
 	 */
 	u8  status;
 	//u32 cache[512];

@@ -51,6 +51,11 @@ u8 rx_data(void)
 		abc = 0;
 	return (0xab + abc);
 }
+
+u8 rx_data1(void)
+{
+	return (0xac);
+}
 void tx_data(u8 data)
 {
 	if(abd != abd_old)
@@ -100,11 +105,12 @@ void main()
 	int i;
 	u32 ret;
 	spiflash_fs_init();
+	u32 add;
 		printf("--------------1--------\n");
 	for(i = 0; ; i++)
 	{
 		printf("--------------2-:%08x-------\n",i);
-		ret = spiflash_add_list(1020);
+		ret = spiflash_add_list(1014);
 		if(ret == NULL)
 		{
 			printf("-------------full!!!!!-------\n");
@@ -113,8 +119,24 @@ void main()
 	}
 
 		printf("--------------test--------\n");
-	spiflash_final_update();
 
+	spiflash_final_update();
+	//add = spiflash_remvoe_list(1014);
+
+	spiflash_del_list(0x7ffb40,1);
+	spiflash_del_list(0x1000,1);
+#if 0
+	if(add == 0)
+			printf("-------------success del list-------\n");
+	else
+			printf("-------------faild del list-------\n");
+
+	for(add = 0x1818; add < 0x3000; add+=0x40c)
+	{
+		printf("-------------d 2-------\n");
+		spiflash_del_list(add,1);
+	}
+		printf("-------------test 2-------\n");
 #if 0
 	for(i = 0; i< 0x1000 ; i++)
 	{
@@ -128,6 +150,7 @@ void main()
 	}
 #else
 		ret = spiflash_sequence_tx();
+#endif
 #endif
 #if 1
 	spiflash_final_update();

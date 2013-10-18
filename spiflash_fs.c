@@ -975,13 +975,14 @@ spiflashaddr_t * spiflash_find_list(node_len_t mylen)
 	if(cache.status == 1)
 		cache_store();
 
-	p = cache.cache[0];
+	p = &cache.cache[0];
 	cache.status = 2;
+	cache.id = 0;
 
 	/* load data to cache */
 	for(i = 0; i < mylen; i++)
 	{
-	  *p = rx_data();
+	  p[i] = rx_data1();
 	}
 
 	linkhead_tmp = read_link_head(rom_mesg_s.vhead, &linkhead_s_tmp);
@@ -990,11 +991,9 @@ spiflashaddr_t * spiflash_find_list(node_len_t mylen)
 		flash_data_read(linkhead_tmp->addr + INROM_LIST_DATALEN_OFFSET,2, &len_tmp);
 		if(len_tmp == mylen)
 		{
-			flash_data_read(linkhead_tmp->addr + INROM_LIST_DATA_OFFSET,mylen, &cache.cache[0x800]);
+			flash_data_read(linkhead_tmp->addr + INROM_LIST_DATA_OFFSET,len_tmp, &cache.cache[0x800]);
 			nf = mem_cmp(&cache.cache[0],&cache.cache[0x800],mylen);
-			if( nf == 1 )
-				continue;
-			else
+			if( nf == 0 )
 				break;
 		}
 
@@ -1005,6 +1004,7 @@ spiflashaddr_t * spiflash_find_list(node_len_t mylen)
 		linkhead_tmp = read_link_head(linkhead_tmp->next, &linkhead_s_tmp);
 
 	}
+	cache.status = 0;
 	if(nf == 0)
 		return linkhead_tmp->addr;
 	else
