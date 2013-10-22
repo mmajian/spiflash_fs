@@ -399,7 +399,9 @@ start:
 	{
 			if(updatelink_num > UPDATE_NUM)
 			{
+#ifdef TEST_ON_PC
 				printf("-------------ERROR--------------------------------------\n");
+#endif
 				return FLASH_ERROR4;
 			}
 
@@ -710,9 +712,12 @@ DEFAULT_RETURN_T spiflash_fs_init(void)
  * this func is API, for store list.
  *
  */
+#define TEST_ON_PC
+#ifdef TEST_ON_PC
 extern int abc;
 extern int abd;
 extern int abd_old;
+#endif
 DEFAULT_RETURN_T spiflash_add_list(node_size_t mylen)
 {
 	node_t	node_tmp;
@@ -794,7 +799,9 @@ DEFAULT_RETURN_T spiflash_add_list(node_size_t mylen)
 		cache.status = 1;
 	}
 
+#ifdef TEST_ON_PC
 	abc ++;/* temp code for test, after dele*/
+#endif
 
 	if(!rom_mesg_s.vhead)
 	{
@@ -910,7 +917,9 @@ DEFAULT_RETURN_T spiflash_del_list(spiflashaddr_t myaddr, u8 mode)
 				tx_data(*p);
 			}
 		}
+#ifdef TEST_ON_PC
 		abd++;
+#endif
 	}
     /*init this data, in order to case if "myaddr == rom_mesg_s.vtail" this case maybe don't init when vlink num is "1" */
 	linkheadpre_tmp.addr = NULL;
