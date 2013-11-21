@@ -694,6 +694,7 @@ DEFAULT_RETURN_T spiflash_fs_init(void)
 	/* init V&R links */
 	spi_flash_read_data(0,  &c, INROM_INFOR_SIZE);
 
+	rom_mesg_s.magic = INROM_MAGIC_VALUE;
 	rom_mesg_s.vhead = *(spiflashaddr_t *)(p+INROM_VHEAD_OFFSET);
 	rom_mesg_s.vtail = *(spiflashaddr_t *)(p+INROM_VTAIL_OFFSET);
 	rom_mesg_s.vnum = *(spiflashaddr_t *)(p+INROM_VNUM_OFFSET);
