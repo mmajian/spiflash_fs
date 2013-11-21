@@ -100,12 +100,48 @@ u8 mem_cmp(u8 *des, u8 *src, u32 size)
 	return 0;
 }
 #define NULL 0
+#include "libspiflash_fs.h"
+extern sff_rtime_t *sff_time_write4read(u32 myt, sff_rtime_t *mysfft);
+extern u32 sff_time_read2write(sff_rtime_t *mysfft);
 void main()
 {
 	int i;
 	u32 ret;
-	spiflash_fs_init();
 	u32 add;
+
+#define TIME_TEST
+#ifdef TIME_TEST
+	sff_rtime_t mysfft;
+	u32 t_tmp;
+
+	mysfft.sec = 32;
+	mysfft.min = 31;
+	mysfft.hour = 22;
+	mysfft.day = 21;
+	mysfft.mon = 12;
+	mysfft.years = 13;
+
+	t_tmp = sff_time_read2write(&mysfft);
+
+	printf("--time:%08x------------1--------\n", t_tmp);
+
+	t_tmp = t_tmp + 1;
+
+		printf("--time:%08x------------2--------\n", t_tmp);
+
+	sff_time_write2read(t_tmp, &mysfft);
+
+		printf("--time:------------3--------\n");
+		printf("\tmysfft.sec:%d\n",mysfft.sec);
+		printf("\tmysfft.min:%d\n",mysfft.min);
+		printf("\tmysfft.hour:%d\n",mysfft.hour);
+		printf("\tmysfft.day:%d\n",mysfft.day);
+		printf("\tmysfft.mon:%d\n",mysfft.mon);
+		printf("\tmysfft.years:%d\n",mysfft.years);
+		printf("----------------------------\n");
+		return;
+#endif
+	spiflash_fs_init();
 		printf("--------------1--------\n");
 	for(i = 0; ; i++)
 	{
@@ -123,7 +159,7 @@ void main()
 	spiflash_final_update();
 	//add = spiflash_remvoe_list(1014);
 
-	spiflash_del_list(0x7ffb40,1);
+	//spiflash_del_list(0x7ffb40,1);
 	spiflash_del_list(0x1000,1);
 #if 0
 	if(add == 0)
