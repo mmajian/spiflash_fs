@@ -801,10 +801,16 @@ DEFAULT_RETURN_T spiflash_add_list(node_size_t mylen)
 		rom_mesg_s.vtail = node_tmp.addr;
 		rom_mesg_s.vhead = node_tmp.addr;
 		//rom_mesg_s.dirty = 1;
+		lh_tmp.addr = node_tmp.addr;
+		lh_tmp.next = NEXT_NULL;
+		lh_tmp.size = NULL;
 	}
-	lh_tmp.addr = rom_mesg_s.vtail;
-	lh_tmp.next = node_tmp.addr;
-	lh_tmp.size = NULL;
+	else
+	{
+		lh_tmp.addr = rom_mesg_s.vtail;
+		lh_tmp.next = node_tmp.addr;
+		lh_tmp.size = NULL;
+	}
 
 	update_link_head(&lh_tmp);
 
