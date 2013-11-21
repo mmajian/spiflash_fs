@@ -93,6 +93,8 @@ struct cache{
 	 *	"1+"	"3":	 none.
 	 */
 	u8  status;
+	u8 pos;
+	u32 pos;
 	//u32 cache[512];
 	u8 cache[4096];
 }cache;
