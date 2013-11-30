@@ -120,6 +120,7 @@ typedef struct vlink{
 #define INROM_RHEAD_OFFSET	0x10
 #define INROM_RTAIL_OFFSET	0x14
 #define INROM_RNUM_OFFSET	0x18
+#define INROM_TXHEAD_OFFSET	0x1c
 
 #define INROM_ERASE_OFFSET	0x100
 
@@ -145,6 +146,7 @@ typedef struct rom_mesg{
 	spiflashaddr_t rhead;
 	spiflashaddr_t rtail;
 	node_num_t rnum;
+	spiflashaddr_t txhead;
 	u32 dirty;
 }rom_mesg_t;
 

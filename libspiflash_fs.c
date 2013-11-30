@@ -1,6 +1,9 @@
+
+typedef unsigned int u32;
+typedef unsigned short u16;
+typedef unsigned char u8;
+
 #include "libspiflash_fs.h"
-
-
 u32 sff_time_read2write(sff_rtime_t *mysfft)
 {
 	sff_wtime_t t_tmp;

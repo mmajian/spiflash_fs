@@ -651,6 +651,7 @@ void spiflash_fs_first_init(void)
 	rom_mesg_s.rhead = SPIFLASH_FS_DATA_SADDR;
 	rom_mesg_s.rtail = SPIFLASH_FS_DATA_SADDR;
 	rom_mesg_s.rnum = 1;
+	rom_mesg_s.txhead = 0;
 
 	cache.status = 3;
 	update_rom_mesg(&rom_mesg_s);
@@ -702,6 +703,7 @@ DEFAULT_RETURN_T spiflash_fs_init(void)
 	rom_mesg_s.rhead = *(spiflashaddr_t *)(p+INROM_RHEAD_OFFSET);
 	rom_mesg_s.rtail = *(spiflashaddr_t *)(p+INROM_RTAIL_OFFSET);
 	rom_mesg_s.rnum = *(spiflashaddr_t *)(p+INROM_RNUM_OFFSET);
+	rom_mesg_s.txhead = *(spiflashaddr_t *)(p+INROM_TXHEAD_OFFSET);
 
 
 
@@ -817,27 +819,17 @@ DEFAULT_RETURN_T spiflash_add_list(node_size_t mylen)
 
 	rom_mesg_s.vtail = node_tmp.addr;
 	if(rom_mesg_s.vhead == NULL)
+	{
 		rom_mesg_s.vhead = rom_mesg_s.vtail;
+		rom_mesg_s.txhead = rom_mesg_s.vhead;
+	}
 
 	rom_mesg_s.dirty = 1;
 
 	return FLASH_OK;
 }
-/*
-DEFAULT_RETURN_T spiflash_tx_list(spiflashaddr_t myaddr)
-{
 
-}
-*/
-/*
- * this func is API, for tx&del list when mode = 0;
- * mode:
- *     0: from vhead del one list, and tx data.
- *     1: del one list for myaddr, and don't data.
- *
- *
- */
-DEFAULT_RETURN_T spiflash_del_list(spiflashaddr_t myaddr, u8 mode)
+DEFAULT_RETURN_T spiflash_tx_list(spiflashaddr_t myaddr)
 {
 	node_t	node_tmp;
 	node_t	*node_p_tmp;
@@ -852,8 +844,6 @@ DEFAULT_RETURN_T spiflash_del_list(spiflashaddr_t myaddr, u8 mode)
 	u8 *p;
 	u16 i;
 
-	if(mode == 0)
-		myaddr = rom_mesg_s.vhead;
 
 	read_link_head(myaddr, &lk_tmp);
 	flash_data_read(myaddr + INROM_LIST_DATALEN_OFFSET, 4, &dsize_tmp);
@@ -861,64 +851,82 @@ DEFAULT_RETURN_T spiflash_del_list(spiflashaddr_t myaddr, u8 mode)
 	id_my = lk_tmp.addr >> SPIFLASH_SECTOR_OFFSET;
 	offset_tmp = lk_tmp.addr & SPIFLASH_SECTOR_SIZE_MASK;
 
-	if(mode == 0)
+	if((offset_tmp + dsize_tmp + INROM_LIST_SIZE)& ~SPIFLASH_SECTOR_SIZE_MASK)
 	{
-		if((offset_tmp + dsize_tmp + INROM_LIST_SIZE)& ~SPIFLASH_SECTOR_SIZE_MASK)
-		{
-			s0 = SPIFLASH_SECTOR_SIZE - offset_tmp - INROM_LIST_SIZE;
-			s1 = (offset_tmp + dsize_tmp + INROM_LIST_SIZE) & SPIFLASH_SECTOR_SIZE_MASK;
-		}
-		else
-		{
-			s0 = dsize_tmp;
-			s1 = 0;
-		}
+		s0 = SPIFLASH_SECTOR_SIZE - offset_tmp - INROM_LIST_SIZE;
+		s1 = (offset_tmp + dsize_tmp + INROM_LIST_SIZE) & SPIFLASH_SECTOR_SIZE_MASK;
+	}
+	else
+	{
+		s0 = dsize_tmp;
+		s1 = 0;
+	}
 
-		if(id_my != cache.id)
-		{
-			switch(cache.status){
-			case 1:
-				cache_store();
-				break;
-			case 0:
-				break;
-			case 2:
-			case 3:
-				return FLASH_ERRORa;
-				break;
-			}
-
-			cache_load(id_my);
+	if(id_my != cache.id)
+	{
+		switch(cache.status){
+		case 1:
+			cache_store();
+			break;
+		case 0:
+			break;
+		case 2:
+		case 3:
+			return FLASH_ERRORa;
+			break;
 		}
 
-		/* first tx length of data */
-		p = &cache.cache[offset_tmp + INROM_LIST_DATALEN_OFFSET];
+		cache_load(id_my);
+	}
 
-		for(i = 0; i < 4; i++)
-		{
-			tx_data(p[i]);
-		}
+	/* first tx length of data */
+	p = &cache.cache[offset_tmp + INROM_LIST_DATALEN_OFFSET];
 
-		/* tx  data */
-		p = &cache.cache[offset_tmp + INROM_LIST_DATA_OFFSET];
-		for(i = 0; i < s0; i++,p++)
+	for(i = 0; i < 4; i++)
+	{
+		tx_data(p[i]);
+	}
+
+	/* tx  data */
+	p = &cache.cache[offset_tmp + INROM_LIST_DATA_OFFSET];
+	for(i = 0; i < s0; i++,p++)
+	{
+		tx_data(*p);
+	}
+
+	if(s1 != 0)
+	{
+		cache_store();
+		cache_load(id_my+1);
+		p = &cache.cache[0];
+
+		for(i = 0; i < s1; i++,p++)
 		{
 			tx_data(*p);
 		}
-
-		if(s1 != 0)
-		{
-			cache_store();
-			cache_load(id_my+1);
-			p = &cache.cache[0];
-
-			for(i = 0; i < s1; i++,p++)
-			{
-				tx_data(*p);
-			}
-		}
-		abd++;
 	}
+	abd++;
+
+	return FLASH_OK;
+}
+/*
+ *
+ *
+ *
+ *
+ *
+ *
+ */
+DEFAULT_RETURN_T spiflash_del_list(spiflashaddr_t myaddr)
+{
+	node_t	node_tmp;
+	linkhead_t   lk_tmp;
+	linkhead_t   linkhead_s_tmp, linkheadpre_tmp;
+	linkhead_t   *linkhead_tmp;
+
+	read_link_head(myaddr, &lk_tmp);
+
+
     /*init this data, in order to case if "myaddr == rom_mesg_s.vtail" this case maybe don't init when vlink num is "1" */
 	linkheadpre_tmp.addr = NULL;
 
@@ -956,6 +964,12 @@ DEFAULT_RETURN_T spiflash_del_list(spiflashaddr_t myaddr, u8 mode)
 	if(myaddr == rom_mesg_s.vtail )
 	{
 		rom_mesg_s.vtail = linkheadpre_tmp.addr;
+		rom_mesg_s.dirty = 1;
+	}
+
+	if(myaddr == rom_mesg_s.txhead )
+	{
+		rom_mesg_s.txhead = linkhead_s_tmp.next;
 		rom_mesg_s.dirty = 1;
 	}
 
@@ -1032,7 +1046,7 @@ DEFAULT_RETURN_T spiflash_remvoe_list(node_len_t mylen)
 	{
 		return 1;
 	}
-	spiflash_del_list(faddr_tmp,1);
+	spiflash_del_list(faddr_tmp);
 
 		return 0;
 }
@@ -1055,10 +1069,39 @@ void spiflash_final_update(void)
 }
 DEFAULT_RETURN_T spiflash_sequence_tx(void)
 {
-	if(rom_mesg_s.vhead == NULL)
+	if(rom_mesg_s.txhead == NULL)
 		return NULL;
 
-	spiflash_del_list(rom_mesg_s.vhead, 0);
+	spiflash_tx_list(rom_mesg_s.txhead);
 		return FLASH_OK;
 
 }
+DEFAULT_RETURN_T spiflash_sequence_del(void)
+{
+	if(rom_mesg_s.txhead == NULL)
+		return NULL;
+
+	spiflash_del_list(rom_mesg_s.txhead);
+		return FLASH_OK;
+
+}
+DEFAULT_RETURN_T spiflash_sequence_nexttx(void)
+{
+	linkhead_t   lk_tmp;
+	linkhead_t   *linkhead_tmp;
+	spiflashaddr_t myaddr;
+
+	myaddr = rom_mesg_s.txhead;
+	linkhead_tmp = read_link_head(myaddr, &lk_tmp);
+	if(linkhead_tmp == NULL)
+	{
+		return FLASH_ERROR1;
+	}
+
+	rom_mesg_s.vhead = lk_tmp.next;
+	rom_mesg_s.dirty = 1;
+
+	return FLASH_OK;
+
+}
+
