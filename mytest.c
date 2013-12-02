@@ -109,7 +109,7 @@ void main()
 	u32 ret;
 	u32 add;
 
-#define TIME_TEST
+//#define TIME_TEST
 #ifdef TIME_TEST
 	sff_rtime_t mysfft;
 	u32 t_tmp;
@@ -143,10 +143,10 @@ void main()
 #endif
 	spiflash_fs_init();
 		printf("--------------1--------\n");
-	for(i = 0; ; i++)
+	for(i = 0; i < 5; i++)
 	{
 		printf("--------------2-:%08x-------\n",i);
-		ret = spiflash_add_list(1014);
+		ret = spiflash_add_list(0x31);
 		if(ret == NULL)
 		{
 			printf("-------------full!!!!!-------\n");
@@ -155,12 +155,49 @@ void main()
 	}
 
 		printf("--------------test--------\n");
-
-	spiflash_final_update();
 	//add = spiflash_remvoe_list(1014);
 
 	//spiflash_del_list(0x7ffb40,1);
-	spiflash_del_list(0x1000,1);
+//	spiflash_del_list(0x1000);
+#if 1
+	for(i = 0 ; i < 6 ; i++)
+	{
+		ret = spiflash_sequence_tx();
+		if(ret == NULL)
+		{
+			printf("---i:%d----------tx on list-------\n",i);
+			break;
+		}
+		//spiflash_sequence_nexttx();
+		ret = spiflash_sequence_del();
+
+	}
+#endif
+
+	for(i = 0 ; i < 5 ; i++)
+	{
+		ret = spiflash_sequence_del();
+		if(ret == NULL)
+		{
+			printf("---i:%d----------del on list-------\n",i);
+			break;
+		}
+		spiflash_sequence_nexttx();
+
+	}
+
+#if 0
+	ret = spiflash_add_list(0x31);
+	if(ret == NULL)
+		{
+			printf("---2----------add on list -------\n");
+		}
+#endif
+
+	printf("--break--1-----\n");
+	spiflash_final_update();
+	printf("--break--2-----\n");
+	return ;
 #if 0
 	if(add == 0)
 			printf("-------------success del list-------\n");

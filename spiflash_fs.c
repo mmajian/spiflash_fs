@@ -803,6 +803,7 @@ DEFAULT_RETURN_T spiflash_add_list(node_size_t mylen)
 	{
 		rom_mesg_s.vtail = node_tmp.addr;
 		rom_mesg_s.vhead = node_tmp.addr;
+		rom_mesg_s.txhead = rom_mesg_s.vhead;
 		//rom_mesg_s.dirty = 1;
 		lh_tmp.addr = node_tmp.addr;
 		lh_tmp.next = NEXT_NULL;
@@ -818,12 +819,18 @@ DEFAULT_RETURN_T spiflash_add_list(node_size_t mylen)
 	update_link_head(&lh_tmp);
 
 	rom_mesg_s.vtail = node_tmp.addr;
+#if 0
 	if(rom_mesg_s.vhead == NULL)
 	{
 		rom_mesg_s.vhead = rom_mesg_s.vtail;
 		rom_mesg_s.txhead = rom_mesg_s.vhead;
 	}
+#endif
 
+	if(rom_mesg_s.txhead == NULL )
+	{
+		rom_mesg_s.txhead = node_tmp.addr;
+	}
 	rom_mesg_s.dirty = 1;
 
 	return FLASH_OK;
@@ -953,8 +960,8 @@ DEFAULT_RETURN_T spiflash_del_list(spiflashaddr_t myaddr)
 		}
 
 		linkhead_s_tmp.addr = linkheadpre_tmp.addr ;
-		//linkhead_s_tmp.next = lk_tmp.next ? lk_tmp.next:NEXT_NULL ;
-		linkhead_s_tmp.next = lk_tmp.next;
+		linkhead_s_tmp.next = lk_tmp.next ? lk_tmp.next:NEXT_NULL ;
+		//linkhead_s_tmp.next = lk_tmp.next;
 		linkhead_s_tmp.size = NULL;
 
 		update_link_head(&linkhead_s_tmp);
@@ -969,7 +976,7 @@ DEFAULT_RETURN_T spiflash_del_list(spiflashaddr_t myaddr)
 
 	if(myaddr == rom_mesg_s.txhead )
 	{
-		rom_mesg_s.txhead = linkhead_s_tmp.next;
+		rom_mesg_s.txhead = lk_tmp.next;
 		rom_mesg_s.dirty = 1;
 	}
 
@@ -1098,7 +1105,7 @@ DEFAULT_RETURN_T spiflash_sequence_nexttx(void)
 		return FLASH_ERROR1;
 	}
 
-	rom_mesg_s.vhead = lk_tmp.next;
+	rom_mesg_s.txhead = lk_tmp.next;
 	rom_mesg_s.dirty = 1;
 
 	return FLASH_OK;
